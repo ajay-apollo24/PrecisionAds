@@ -1,0 +1,377 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum OrganizationType {
+  PUBLISHER
+  ADVERTISER
+  AGENCY
+  NETWORK
+}
+
+enum PublisherSiteStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum AdUnitFormat {
+  BANNER
+  VIDEO
+  NATIVE
+  DISPLAY
+  INTERSTITIAL
+}
+
+enum AdUnitStatus {
+  ACTIVE
+  INACTIVE
+  TESTING
+}
+
+enum AdRequestStatus {
+  PENDING
+  PROCESSED
+  SERVED
+  FAILED
+  BLOCKED
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignType {
+  DISPLAY
+  VIDEO
+  NATIVE
+  SEARCH
+  SOCIAL
+}
+
+enum BudgetType {
+  DAILY
+  LIFETIME
+  MONTHLY
+}
+
+enum BidStrategy {
+  MANUAL
+  AUTO_CPC
+  AUTO_CPM
+  TARGET_CPA
+}
+
+enum CreativeType {
+  IMAGE
+  VIDEO
+  HTML5
+  NATIVE
+  TEXT
+}
+
+enum AdStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  REJECTED
+  APPROVED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  PUBLISHER
+  ADVERTISER
+  ANALYST
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+// Models
+model User {
+  id              String      @id @default(cuid())
+  email           String      @unique
+  password        String
+  firstName       String
+  lastName        String
+  role            UserRole
+  status          UserStatus  @default(PENDING)
+  organizationId  String?
+  lastLoginAt     DateTime?
+  emailVerified   Boolean     @default(false)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  sessions       UserSession[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ipAddress String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_sessions")
+}
+
+model Organization {
+  id          String           @id @default(cuid())
+  name        String
+  orgType     OrganizationType @default(ADVERTISER)
+  domain      String?
+  status      String           @default("ACTIVE")
+  settings    Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  users       User[]
+  
+  // Publisher-specific relations
+  publisherSites PublisherSite[]
+  adUnits       AdUnit[]
+  adRequests    AdRequest[]
+  publisherEarnings PublisherEarning[]
+  
+  // Advertiser-specific relations  
+  advertiserCampaigns AdvertiserCampaign[]
+  advertiserAds       AdvertiserAd[]
+  advertiserAudiences AdvertiserAudience[]
+  
+  // Shared relations
+  analyticsEvents AnalyticsEvent[]
+
+  @@map("organizations")
+}
+
+model PublisherSite {
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String
+  domain          String
+  status          PublisherSiteStatus @default(PENDING)
+  settings        Json? // Site-specific settings
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  adUnits        AdUnit[]
+  adRequests     AdRequest[]
+  earnings       PublisherEarning[]
+  
+  @@unique([organizationId, domain])
+  @@map("publisher_sites")
+}
+
+model AdUnit {
+  id              String   @id @default(cuid())
+  organizationId  String
+  siteId          String
+  name            String
+  size            String // "300x250", "728x90"
+  format          AdUnitFormat
+  status          AdUnitStatus @default(INACTIVE)
+  settings        Json? // Targeting, frequency caps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  site            PublisherSite @relation(fields: [siteId], references: [id])
+  adRequests      AdRequest[]
+  
+  @@unique([organizationId, siteId, name])
+  @@map("ad_units")
+}
+
+model AdRequest {
+  id              String   @id @default(cuid())
+  organizationId  String
+  siteId          String
+  adUnitId        String
+  requestId       String   @unique
+  userAgent       String?
+  ipAddress       String?
+  geoLocation     Json?
+  deviceInfo      Json?
+  targeting       Json?
+  status          AdRequestStatus @default(PENDING)
+  servedAdId      String?
+  bidAmount       Decimal?
+  cpm             Decimal?
+  clickThrough    Boolean  @default(false)
+  impression      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  site            PublisherSite @relation(fields: [siteId], references: [id])
+  adUnit          AdUnit        @relation(fields: [adUnitId], references: [id])
+  
+  @@map("ad_requests")
+}
+
+model PublisherEarning {
+  id              String   @id @default(cuid())
+  organizationId  String
+  siteId          String
+  date            DateTime
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  revenue         Decimal  @default(0)
+  cpm             Decimal  @default(0)
+  cpc             Decimal  @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  site            PublisherSite @relation(fields: [siteId], references: [id])
+  
+  @@unique([organizationId, siteId, date])
+  @@map("publisher_earnings")
+}
+
+model AdvertiserCampaign {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  name               String
+  status             CampaignStatus    @default(DRAFT)
+  type               CampaignType
+  startDate          DateTime?
+  endDate            DateTime?
+  budget             Decimal
+  budgetType         BudgetType
+  bidStrategy        BidStrategy
+  targetCPM          Decimal?
+  targetCPC          Decimal?
+  targetCPA          Decimal?
+  dailyBudget        Decimal?
+  totalSpent         Decimal          @default(0)
+  impressions        Int              @default(0)
+  clicks             Int              @default(0)
+  conversions        Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  
+  organization       Organization      @relation(fields: [organizationId], references: [id])
+  ads                AdvertiserAd[]
+  audiences          AdvertiserAudience[]
+  
+  @@map("advertiser_campaigns")
+}
+
+model AdvertiserAd {
+  id               String            @id @default(cuid())
+  organizationId   String
+  campaignId       String
+  name             String
+  creativeType     CreativeType
+  creativeUrl      String
+  landingPageUrl   String
+  status           AdStatus          @default(DRAFT)
+  weight           Int               @default(100)
+  targeting        Json?
+  impressions      Int               @default(0)
+  clicks           Int               @default(0)
+  conversions      Int               @default(0)
+  ctr              Decimal           @default(0)
+  cpc              Decimal           @default(0)
+  cpm              Decimal           @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  campaign         AdvertiserCampaign @relation(fields: [campaignId], references: [id])
+  
+  @@map("advertiser_ads")
+}
+
+model AdvertiserAudience {
+  id               String   @id @default(cuid())
+  organizationId   String
+  campaignId       String
+  name             String
+  description      String?
+  targeting        Json? // Demographics, interests, behaviors
+  size             Int? // Estimated audience size
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  campaign         AdvertiserCampaign @relation(fields: [campaignId], references: [id])
+  
+  @@map("advertiser_audiences")
+}
+
+model AnalyticsEvent {
+  id              String   @id @default(cuid())
+  organizationId  String
+  eventType       String   // impression, click, conversion
+  eventData       Json
+  timestamp       DateTime @default(now())
+  userId          String?  // Anonymous user ID
+  sessionId       String?
+  
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  
+  @@map("analytics_events")
+}
+
+model AdBid {
+  id              String   @id @default(cuid())
+  adRequestId     String
+  advertiserId    String
+  adId            String
+  bidAmount       Decimal
+  cpm             Decimal
+  cpc             Decimal?
+  targetingScore  Decimal?
+  qualityScore    Decimal?
+  won             Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  
+  @@map("ad_bids")
+}
+
+model FrequencyCap {
+  id              String   @id @default(cuid())
+  organizationId  String
+  campaignId      String?
+  adId            String?
+  userId          String
+  eventType       String // impression, click
+  count           Int      @default(1)
+  windowStart     DateTime
+  windowEnd       DateTime
+  createdAt       DateTime @default(now())
+  
+  @@map("frequency_caps")
+} 
