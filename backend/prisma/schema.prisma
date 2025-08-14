@@ -61,6 +61,9 @@ enum CampaignType {
   NATIVE
   SEARCH
   SOCIAL
+  RETARGETING
+  RTB
+  PROGRAMMATIC
 }
 
 enum BudgetType {
@@ -74,6 +77,8 @@ enum BidStrategy {
   AUTO_CPC
   AUTO_CPM
   TARGET_CPA
+  PREDICTIVE
+  AI_OPTIMIZED
 }
 
 enum CreativeType {
@@ -107,24 +112,63 @@ enum UserStatus {
   PENDING
 }
 
+// Advanced Module Enums
+enum AudienceSegmentType {
+  DEMOGRAPHIC
+  BEHAVIORAL
+  GEOGRAPHIC
+  INTEREST_BASED
+  CUSTOM
+}
+
+enum AudienceSegmentStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum OptimizationType {
+  PERFORMANCE
+  REVENUE
+  EFFICIENCY
+  TARGETING
+  BIDDING
+}
+
+enum OptimizationStatus {
+  SETUP
+  RUNNING
+  COMPLETED
+  FAILED
+  PAUSED
+}
+
+enum ModelStatus {
+  TRAINING
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
 // Models
 model User {
-  id              String      @id @default(cuid())
-  email           String      @unique
+  id              String     @id @default(cuid())
+  email           String     @unique
   password        String
   firstName       String
   lastName        String
   role            UserRole
-  status          UserStatus  @default(PENDING)
+  status          UserStatus @default(PENDING)
   organizationId  String?
   lastLoginAt     DateTime?
-  emailVerified   Boolean     @default(false)
+  emailVerified   Boolean    @default(false)
   emailVerifiedAt DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-  sessions       UserSession[]
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  sessions     UserSession[]
 
   @@map("users")
 }
@@ -144,234 +188,690 @@ model UserSession {
 }
 
 model Organization {
-  id          String           @id @default(cuid())
-  name        String
-  orgType     OrganizationType @default(ADVERTISER)
-  domain      String?
-  status      String           @default("ACTIVE")
-  settings    Json?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id        String           @id @default(cuid())
+  name      String
+  orgType   OrganizationType @default(ADVERTISER)
+  domain    String?
+  status    String           @default("ACTIVE")
+  settings  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   // Relations
-  users       User[]
-  
+  users User[]
+
   // Publisher-specific relations
-  publisherSites PublisherSite[]
-  adUnits       AdUnit[]
-  adRequests    AdRequest[]
+  publisherSites    PublisherSite[]
+  adUnits           AdUnit[]
+  adRequests        AdRequest[]
   publisherEarnings PublisherEarning[]
-  
+
   // Advertiser-specific relations  
   advertiserCampaigns AdvertiserCampaign[]
   advertiserAds       AdvertiserAd[]
   advertiserAudiences AdvertiserAudience[]
-  
+
   // Shared relations
   analyticsEvents AnalyticsEvent[]
+  AudienceSegment AudienceSegment[]
 
   @@map("organizations")
 }
 
 model PublisherSite {
-  id              String   @id @default(cuid())
-  organizationId  String
-  name            String
-  domain          String
-  status          PublisherSiteStatus @default(PENDING)
-  settings        Json? // Site-specific settings
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  adUnits        AdUnit[]
-  adRequests     AdRequest[]
-  earnings       PublisherEarning[]
-  
+  id             String              @id @default(cuid())
+  organizationId String
+  name           String
+  domain         String
+  status         PublisherSiteStatus @default(PENDING)
+  settings       Json? // Site-specific settings
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id])
+  adUnits      AdUnit[]
+  adRequests   AdRequest[]
+  earnings     PublisherEarning[]
+
   @@unique([organizationId, domain])
   @@map("publisher_sites")
 }
 
 model AdUnit {
-  id              String   @id @default(cuid())
-  organizationId  String
-  siteId          String
-  name            String
-  size            String // "300x250", "728x90"
-  format          AdUnitFormat
-  status          AdUnitStatus @default(INACTIVE)
-  settings        Json? // Targeting, frequency caps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  site            PublisherSite @relation(fields: [siteId], references: [id])
-  adRequests      AdRequest[]
-  
+  id             String       @id @default(cuid())
+  organizationId String
+  siteId         String
+  name           String
+  size           String // "300x250", "728x90"
+  format         AdUnitFormat
+  status         AdUnitStatus @default(INACTIVE)
+  settings       Json? // Targeting, frequency caps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  site         PublisherSite @relation(fields: [siteId], references: [id])
+  adRequests   AdRequest[]
+
   @@unique([organizationId, siteId, name])
   @@map("ad_units")
 }
 
 model AdRequest {
-  id              String   @id @default(cuid())
-  organizationId  String
-  siteId          String
-  adUnitId        String
-  requestId       String   @unique
-  userAgent       String?
-  ipAddress       String?
-  geoLocation     Json?
-  deviceInfo      Json?
-  targeting       Json?
-  status          AdRequestStatus @default(PENDING)
-  servedAdId      String?
-  bidAmount       Decimal?
-  cpm             Decimal?
-  clickThrough    Boolean  @default(false)
-  impression      Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  site            PublisherSite @relation(fields: [siteId], references: [id])
-  adUnit          AdUnit        @relation(fields: [adUnitId], references: [id])
-  
+  id             String          @id @default(cuid())
+  organizationId String
+  siteId         String
+  adUnitId       String
+  requestId      String          @unique
+  userAgent      String?
+  ipAddress      String?
+  geoLocation    Json?
+  deviceInfo     Json?
+  targeting      Json?
+  status         AdRequestStatus @default(PENDING)
+  servedAdId     String?
+  bidAmount      Decimal?
+  cpm            Decimal?
+  clickThrough   Boolean         @default(false)
+  impression     Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  site         PublisherSite @relation(fields: [siteId], references: [id])
+  adUnit       AdUnit        @relation(fields: [adUnitId], references: [id])
+
   @@map("ad_requests")
 }
 
 model PublisherEarning {
-  id              String   @id @default(cuid())
-  organizationId  String
-  siteId          String
-  date            DateTime
-  impressions     Int      @default(0)
-  clicks          Int      @default(0)
-  revenue         Decimal  @default(0)
-  cpm             Decimal  @default(0)
-  cpc             Decimal  @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  site            PublisherSite @relation(fields: [siteId], references: [id])
-  
+  id             String   @id @default(cuid())
+  organizationId String
+  siteId         String
+  date           DateTime
+  impressions    Int      @default(0)
+  clicks         Int      @default(0)
+  revenue        Decimal  @default(0)
+  cpm            Decimal  @default(0)
+  cpc            Decimal  @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  site         PublisherSite @relation(fields: [siteId], references: [id])
+
   @@unique([organizationId, siteId, date])
   @@map("publisher_earnings")
 }
 
 model AdvertiserCampaign {
-  id                 String            @id @default(cuid())
-  organizationId     String
-  name               String
-  status             CampaignStatus    @default(DRAFT)
-  type               CampaignType
-  startDate          DateTime?
-  endDate            DateTime?
-  budget             Decimal
-  budgetType         BudgetType
-  bidStrategy        BidStrategy
-  targetCPM          Decimal?
-  targetCPC          Decimal?
-  targetCPA          Decimal?
-  dailyBudget        Decimal?
-  totalSpent         Decimal          @default(0)
-  impressions        Int              @default(0)
-  clicks             Int              @default(0)
-  conversions        Int              @default(0)
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  
-  organization       Organization      @relation(fields: [organizationId], references: [id])
-  ads                AdvertiserAd[]
-  audiences          AdvertiserAudience[]
-  
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  status         CampaignStatus @default(DRAFT)
+  type           CampaignType
+  startDate      DateTime?
+  endDate        DateTime?
+  budget         Decimal
+  budgetType     BudgetType
+  bidStrategy    BidStrategy
+  targetCPM      Decimal?
+  targetCPC      Decimal?
+  targetCPA      Decimal?
+  dailyBudget    Decimal?
+  totalSpent     Decimal        @default(0)
+  impressions    Int            @default(0)
+  clicks         Int            @default(0)
+  conversions    Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id])
+  ads          AdvertiserAd[]
+  audiences    AdvertiserAudience[]
+
   @@map("advertiser_campaigns")
 }
 
 model AdvertiserAd {
-  id               String            @id @default(cuid())
-  organizationId   String
-  campaignId       String
-  name             String
-  creativeType     CreativeType
-  creativeUrl      String
-  landingPageUrl   String
-  status           AdStatus          @default(DRAFT)
-  weight           Int               @default(100)
-  targeting        Json?
-  impressions      Int               @default(0)
-  clicks           Int               @default(0)
-  conversions      Int               @default(0)
-  ctr              Decimal           @default(0)
-  cpc              Decimal           @default(0)
-  cpm              Decimal           @default(0)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  
-  organization     Organization      @relation(fields: [organizationId], references: [id])
-  campaign         AdvertiserCampaign @relation(fields: [campaignId], references: [id])
-  
+  id             String       @id @default(cuid())
+  organizationId String
+  campaignId     String
+  name           String
+  creativeType   CreativeType
+  creativeUrl    String
+  landingPageUrl String
+  status         AdStatus     @default(DRAFT)
+  weight         Int          @default(100)
+  targeting      Json?
+  impressions    Int          @default(0)
+  clicks         Int          @default(0)
+  conversions    Int          @default(0)
+  ctr            Decimal      @default(0)
+  cpc            Decimal      @default(0)
+  cpm            Decimal      @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id])
+  campaign     AdvertiserCampaign @relation(fields: [campaignId], references: [id])
+
   @@map("advertiser_ads")
 }
 
 model AdvertiserAudience {
-  id               String   @id @default(cuid())
-  organizationId   String
-  campaignId       String
-  name             String
-  description      String?
-  targeting        Json? // Demographics, interests, behaviors
-  size             Int? // Estimated audience size
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  organization     Organization      @relation(fields: [organizationId], references: [id])
-  campaign         AdvertiserCampaign @relation(fields: [campaignId], references: [id])
-  
+  id             String   @id @default(cuid())
+  organizationId String
+  campaignId     String
+  name           String
+  description    String?
+  targeting      Json? // Demographics, interests, behaviors
+  size           Int? // Estimated audience size
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id])
+  campaign     AdvertiserCampaign @relation(fields: [campaignId], references: [id])
+
   @@map("advertiser_audiences")
 }
 
 model AnalyticsEvent {
-  id              String   @id @default(cuid())
-  organizationId  String
-  eventType       String   // impression, click, conversion
-  eventData       Json
-  timestamp       DateTime @default(now())
-  userId          String?  // Anonymous user ID
-  sessionId       String?
-  
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  
+  id             String   @id @default(cuid())
+  organizationId String
+  eventType      String // impression, click, conversion
+  eventData      Json
+  timestamp      DateTime @default(now())
+  userId         String? // Anonymous user ID
+  sessionId      String?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
   @@map("analytics_events")
 }
 
 model AdBid {
-  id              String   @id @default(cuid())
-  adRequestId     String
-  advertiserId    String
-  adId            String
-  bidAmount       Decimal
-  cpm             Decimal
-  cpc             Decimal?
-  targetingScore  Decimal?
-  qualityScore    Decimal?
-  won             Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  
+  id             String   @id @default(cuid())
+  adRequestId    String
+  advertiserId   String
+  adId           String
+  bidAmount      Decimal
+  cpm            Decimal
+  cpc            Decimal?
+  targetingScore Decimal?
+  qualityScore   Decimal?
+  won            Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
   @@map("ad_bids")
 }
 
 model FrequencyCap {
+  id             String   @id @default(cuid())
+  organizationId String
+  campaignId     String?
+  adId           String?
+  userId         String
+  eventType      String // impression, click
+  count          Int      @default(1)
+  windowStart    DateTime
+  windowEnd      DateTime
+  createdAt      DateTime @default(now())
+
+  @@map("frequency_caps")
+}
+
+// Advanced Module Models
+
+// Audience Management Models
+model AudienceSegment {
+  id             String                @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  type           AudienceSegmentType
+  targetingRules Json
+  estimatedSize  Int?
+  status         AudienceSegmentStatus @default(DRAFT)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organization Organization                 @relation(fields: [organizationId], references: [id])
+  performance  AudienceSegmentPerformance[]
+
+  @@map("audience_segments")
+}
+
+model AudienceSegmentPerformance {
+  id             String   @id @default(cuid())
+  organizationId String
+  segmentId      String
+  date           DateTime
+  impressions    Int      @default(0)
+  clicks         Int      @default(0)
+  conversions    Int      @default(0)
+  revenue        Decimal  @default(0)
+  createdAt      DateTime @default(now())
+
+  segment AudienceSegment @relation(fields: [segmentId], references: [id])
+
+  @@map("audience_segment_performance")
+}
+
+model AudienceDemographics {
+  id             String   @id @default(cuid())
+  organizationId String
+  date           DateTime
+  audienceSize   Int
+  ageGroups      Json
+  gender         Json
+  income         Json
+  education      Json
+  createdAt      DateTime @default(now())
+
+  @@map("audience_demographics")
+}
+
+model AudienceBehavior {
+  id             String   @id @default(cuid())
+  organizationId String
+  date           DateTime
+  behaviorType   String
+  behaviorData   Json
+  frequency      Int
+  createdAt      DateTime @default(now())
+
+  @@map("audience_behavior")
+}
+
+model AudienceEngagement {
   id              String   @id @default(cuid())
   organizationId  String
-  campaignId      String?
-  adId            String?
-  userId          String
-  eventType       String // impression, click
-  count           Int      @default(1)
-  windowStart     DateTime
-  windowEnd       DateTime
+  date            DateTime
+  engagementRate  Decimal
+  sessionDuration Int
+  pageViews       Int
+  bounceRate      Decimal
   createdAt       DateTime @default(now())
-  
-  @@map("frequency_caps")
-} 
+
+  @@map("audience_engagement")
+}
+
+model AudienceRealtimeData {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  isActive        Boolean  @default(true)
+  isEngaged       Boolean  @default(false)
+  sessionDuration Int
+  lastActivity    DateTime
+  createdAt       DateTime @default(now())
+
+  @@map("audience_realtime_data")
+}
+
+model AudienceEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  eventType      String
+  eventData      Json
+  timestamp      DateTime @default(now())
+
+  @@map("audience_events")
+}
+
+model AudienceSegmentOverlap {
+  id                String   @id @default(cuid())
+  organizationId    String
+  segmentId1        String
+  segmentId2        String
+  overlapPercentage Decimal
+  createdAt         DateTime @default(now())
+
+  @@map("audience_segment_overlap")
+}
+
+// Analytics Models
+model PerformanceMetrics {
+  id             String   @id @default(cuid())
+  organizationId String
+  date           DateTime
+  campaignId     String?
+  adId           String?
+  impressions    Int      @default(0)
+  clicks         Int      @default(0)
+  conversions    Int      @default(0)
+  revenue        Decimal  @default(0)
+  spend          Decimal  @default(0)
+  ctr            Decimal  @default(0)
+  cpc            Decimal  @default(0)
+  cpm            Decimal  @default(0)
+  createdAt      DateTime @default(now())
+
+  @@map("performance_metrics")
+}
+
+model RevenueAnalytics {
+  id             String   @id @default(cuid())
+  organizationId String
+  date           DateTime
+  revenue        Decimal  @default(0)
+  cost           Decimal  @default(0)
+  profit         Decimal  @default(0)
+  roi            Decimal  @default(0)
+  source         String
+  createdAt      DateTime @default(now())
+
+  @@map("revenue_analytics")
+}
+
+model UserAnalytics {
+  id              String   @id @default(cuid())
+  organizationId  String
+  date            DateTime
+  userId          String
+  sessionDuration Int
+  pageViews       Int
+  conversions     Int
+  revenue         Decimal  @default(0)
+  createdAt       DateTime @default(now())
+
+  @@map("user_analytics")
+}
+
+model CustomReport {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  query          Json
+  schedule       String?
+  lastGenerated  DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@map("custom_reports")
+}
+
+// Advanced Algorithm Models
+model RetargetingCampaign {
+  id               String         @id @default(cuid())
+  organizationId   String
+  name             String
+  description      String?
+  targetAudience   Json
+  retargetingRules Json
+  frequencyCaps    Json
+  bidStrategy      BidStrategy
+  budget           Decimal?
+  startDate        DateTime?
+  endDate          DateTime?
+  status           CampaignStatus @default(DRAFT)
+  type             CampaignType   @default(RETARGETING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("retargeting_campaigns")
+}
+
+model RTBCampaign {
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  exchanges      Json
+  bidStrategy    BidStrategy
+  maxBid         Decimal
+  budget         Decimal?
+  targeting      Json
+  startDate      DateTime?
+  endDate        DateTime?
+  status         CampaignStatus @default(DRAFT)
+  type           CampaignType   @default(RTB)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("rtb_campaigns")
+}
+
+model RTBBidRequest {
+  id             String   @id @default(cuid())
+  organizationId String
+  campaignId     String
+  exchange       String
+  requestData    Json
+  status         String
+  createdAt      DateTime @default(now())
+
+  @@map("rtb_bid_requests")
+}
+
+model RTBPerformance {
+  id             String   @id @default(cuid())
+  organizationId String
+  campaignId     String
+  date           DateTime
+  bidRequests    Int      @default(0)
+  bids           Int      @default(0)
+  wins           Int      @default(0)
+  spend          Decimal  @default(0)
+  impressions    Int      @default(0)
+  clicks         Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@map("rtb_performance")
+}
+
+model ProgrammaticDeal {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  type           String
+  publisherId    String
+  campaignId     String?
+  dealTerms      Json
+  targeting      Json
+  budget         Decimal?
+  startDate      DateTime?
+  endDate        DateTime?
+  status         String    @default("DRAFT")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("programmatic_deals")
+}
+
+model ProgrammaticInventory {
+  id                   String   @id @default(cuid())
+  organizationId       String
+  publisherId          String
+  adUnitType           String
+  geoLocation          Json?
+  date                 DateTime
+  availableImpressions Int
+  estimatedCPM         Decimal
+  estimatedRevenue     Decimal
+  createdAt            DateTime @default(now())
+
+  @@map("programmatic_inventory")
+}
+
+model ProgrammaticPerformance {
+  id             String   @id @default(cuid())
+  organizationId String
+  dealId         String?
+  publisherId    String?
+  date           DateTime
+  impressions    Int      @default(0)
+  clicks         Int      @default(0)
+  conversions    Int      @default(0)
+  spend          Decimal  @default(0)
+  revenue        Decimal  @default(0)
+  type           String   @default("PROGRAMMATIC")
+  createdAt      DateTime @default(now())
+
+  @@map("programmatic_performance")
+}
+
+model PredictiveBiddingModel {
+  id             String      @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  type           String
+  algorithm      String
+  parameters     Json
+  trainingData   Json
+  targetMetrics  Json
+  status         ModelStatus @default(TRAINING)
+  accuracy       Decimal     @default(0)
+  lastTrainedAt  DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@map("predictive_bidding_models")
+}
+
+model BidPrediction {
+  id             String   @id @default(cuid())
+  organizationId String
+  modelId        String
+  auctionData    Json
+  context        Json?
+  prediction     Json
+  timestamp      DateTime @default(now())
+
+  @@map("bid_predictions")
+}
+
+model PredictiveBiddingPerformance {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  modelId             String
+  date                DateTime
+  predictions         Int      @default(0)
+  accuratePredictions Int      @default(0)
+  revenue             Decimal  @default(0)
+  spend               Decimal  @default(0)
+  createdAt           DateTime @default(now())
+
+  @@map("predictive_bidding_performance")
+}
+
+model AIOptimizationCampaign {
+  id               String             @id @default(cuid())
+  organizationId   String
+  name             String
+  description      String?
+  optimizationType OptimizationType
+  targetMetrics    Json
+  constraints      Json
+  budget           Decimal?
+  startDate        DateTime?
+  endDate          DateTime?
+  status           OptimizationStatus @default(SETUP)
+  startedAt        DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@map("ai_optimization_campaigns")
+}
+
+model AIOptimizationRecommendation {
+  id             String   @id @default(cuid())
+  organizationId String
+  campaignId     String?
+  type           String
+  category       String
+  description    String
+  impact         Decimal
+  confidence     Decimal
+  parameters     Json?
+  createdAt      DateTime @default(now())
+
+  @@map("ai_optimization_recommendations")
+}
+
+model OptimizationApplication {
+  id               String    @id @default(cuid())
+  organizationId   String
+  recommendationId String
+  parameters       Json
+  result           Json
+  status           String
+  appliedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@map("optimization_applications")
+}
+
+model AIModelInsight {
+  id             String   @id @default(cuid())
+  organizationId String
+  campaignId     String?
+  modelId        String?
+  date           DateTime
+  accuracy       Decimal
+  performance    Json
+  insights       Json
+  createdAt      DateTime @default(now())
+
+  @@map("ai_model_insights")
+}
+
+// Targeting Models
+model TargetingRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  type           String
+  conditions     Json
+  priority       Int      @default(1)
+  status         String   @default("DRAFT")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("targeting_rules")
+}
+
+model TargetingRulePerformance {
+  id                String   @id @default(cuid())
+  organizationId    String
+  targetingRuleId   String
+  date              DateTime
+  impressions       Int      @default(0)
+  clicks            Int      @default(0)
+  conversions       Int      @default(0)
+  revenue           Decimal  @default(0)
+  targetingAccuracy Decimal  @default(0)
+  createdAt         DateTime @default(now())
+
+  @@map("targeting_rule_performance")
+}
+
+model AudienceOptimization {
+  id             String   @id @default(cuid())
+  organizationId String
+  segmentId      String
+  type           String
+  parameters     Json
+  result         Json
+  status         String
+  createdAt      DateTime @default(now())
+
+  @@map("audience_optimizations")
+}
+
+model AudienceOptimizationRecommendation {
+  id             String   @id @default(cuid())
+  organizationId String
+  segmentId      String?
+  type           String
+  description    String
+  impact         Decimal
+  confidence     Decimal
+  parameters     Json?
+  createdAt      DateTime @default(now())
+
+  @@map("audience_optimization_recommendations")
+}
