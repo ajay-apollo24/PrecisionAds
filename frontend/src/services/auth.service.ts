@@ -1,39 +1,5 @@
 import { User } from '../App';
 
-// Mock data for development
-const mockOrganizations = [
-  { id: '1', name: 'AdTech Solutions Inc' },
-  { id: '2', name: 'Digital Marketing Co' },
-  { id: '3', name: 'Brand Publishers LLC' },
-];
-
-const mockUsers = [
-  {
-    id: '1',
-    email: 'admin@adtech.com',
-    password: 'admin123',
-    name: 'John Admin',
-    role: 'admin' as const,
-    organizationId: '1',
-  },
-  {
-    id: '2',
-    email: 'advertiser@digital.com',
-    password: 'advertiser123',
-    name: 'Sarah Advertiser',
-    role: 'advertiser' as const,
-    organizationId: '2',
-  },
-  {
-    id: '3',
-    email: 'publisher@brand.com',
-    password: 'publisher123',
-    name: 'Mike Publisher',
-    role: 'publisher' as const,
-    organizationId: '3',
-  },
-];
-
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -59,25 +25,15 @@ class AuthService {
   private useMock: boolean;
 
   constructor() {
-    // Use mock data in development, real API in production
+    // Use real API by default, fallback to mock only if explicitly needed
     this.baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
-    this.useMock = (import.meta as any).env?.NODE_ENV === 'development' || !(import.meta as any).env?.VITE_API_URL;
+    this.useMock = false; // Disable mock mode for real integration
   }
 
   // Get available organizations
   async getOrganizations(): Promise<Organization[]> {
-    if (this.useMock) {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return mockOrganizations.map(org => ({
-        ...org,
-        type: 'ADVERTISER',
-        status: 'active'
-      }));
-    }
-
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/organizations`, {
+      const response = await fetch(`${this.baseUrl}/api/v1/auth/organizations`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -92,59 +48,15 @@ class AuthService {
       return data.organizations || [];
     } catch (error) {
       console.error('Failed to fetch organizations:', error);
-      // Fallback to mock data if API fails
-      return mockOrganizations.map(org => ({
-        ...org,
-        type: 'ADVERTISER',
-        status: 'active'
-      }));
+      // Return empty array instead of mock data
+      return [];
     }
   }
 
   // Authenticate user
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    if (this.useMock) {
-      // Mock authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const user = mockUsers.find(u => 
-        u.email === credentials.email && 
-        u.password === credentials.password &&
-        u.organizationId === credentials.organizationId
-      );
-      
-      if (!user) {
-        return {
-          success: false,
-          error: 'Invalid credentials or organization mismatch'
-        };
-      }
-
-      const organization = mockOrganizations.find(org => org.id === credentials.organizationId);
-      
-      const userData: User = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        organizationId: credentials.organizationId,
-        organizationName: organization?.name || '',
-      };
-
-      // Store mock token in localStorage
-      const mockToken = `mock_token_${Date.now()}`;
-      localStorage.setItem('auth_token', mockToken);
-      localStorage.setItem('user_data', JSON.stringify(userData));
-
-      return {
-        success: true,
-        user: userData,
-        token: mockToken
-      };
-    }
-
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/login`, {
+      const response = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +68,7 @@ class AuthService {
         const errorData = await response.json().catch(() => ({}));
         return {
           success: false,
-          error: errorData.message || `Login failed: ${response.status}`
+          error: errorData.error || `Login failed: ${response.status}`
         };
       }
 
@@ -184,17 +96,10 @@ class AuthService {
 
   // Logout user
   async logout(): Promise<void> {
-    if (this.useMock) {
-      // Clear mock data
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
-      return;
-    }
-
     try {
       const token = this.getToken();
       if (token) {
-        await fetch(`${this.baseUrl}/api/auth/logout`, {
+        await fetch(`${this.baseUrl}/api/v1/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -236,17 +141,13 @@ class AuthService {
     return !!(token && user);
   }
 
-  // Validate token (for real API)
+  // Validate token
   async validateToken(): Promise<boolean> {
-    if (this.useMock) {
-      return this.isAuthenticated();
-    }
-
     try {
       const token = this.getToken();
       if (!token) return false;
 
-      const response = await fetch(`${this.baseUrl}/api/auth/validate`, {
+      const response = await fetch(`${this.baseUrl}/api/v1/auth/validate`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -261,17 +162,13 @@ class AuthService {
     }
   }
 
-  // Refresh token (for real API)
+  // Refresh token
   async refreshToken(): Promise<string | null> {
-    if (this.useMock) {
-      return this.getToken();
-    }
-
     try {
       const token = this.getToken();
       if (!token) return null;
 
-      const response = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+      const response = await fetch(`${this.baseUrl}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -294,30 +191,13 @@ class AuthService {
     }
   }
 
-  // Get user permissions (for real API)
+  // Get user permissions
   async getUserPermissions(): Promise<string[]> {
-    if (this.useMock) {
-      const user = this.getCurrentUser();
-      if (!user) return [];
-
-      // Mock permissions based on role
-      switch (user.role) {
-        case 'admin':
-          return ['ORG_CREATE', 'USER_MANAGE', 'API_KEY_MANAGE', 'SYSTEM_ACCESS'];
-        case 'advertiser':
-          return ['CAMPAIGN_MANAGE', 'ANALYTICS_READ', 'AUDIENCE_MANAGE'];
-        case 'publisher':
-          return ['SITE_MANAGE', 'AD_UNIT_MANAGE', 'EARNINGS_READ'];
-        default:
-          return [];
-      }
-    }
-
     try {
       const token = this.getToken();
       if (!token) return [];
 
-      const response = await fetch(`${this.baseUrl}/api/auth/permissions`, {
+      const response = await fetch(`${this.baseUrl}/api/v1/auth/permissions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

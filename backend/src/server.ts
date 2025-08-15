@@ -14,15 +14,33 @@ import { setupRoutes } from './app';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 7401;
 
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration - Allow multiple origins for development
+const allowedOrigins = [
+  process.env.CORS_ORIGIN || 'http://localhost:7400',
+  'http://localhost:7400',  // Frontend port
+  'http://localhost:5173',  // Alternative frontend port
+  'http://localhost:3000'   // Fallback
+];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Organization-Id']
 }));
 
 // Rate limiting
@@ -75,6 +93,7 @@ app.listen(PORT, () => {
   logger.info(`🚀 Precision Ads Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
+  logger.info(`🌐 CORS enabled for origins: ${allowedOrigins.join(', ')}`);
 });
 
 export default app; 

@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Selector, SelectorOption } from './ui/selector';
 import { useAuth } from '../App';
 import { toast } from './ui/sonner';
-import { Building2, Mail, Lock } from 'lucide-react';
+import { Building2, Mail, Lock, AlertCircle } from 'lucide-react';
 import { authService, Organization } from '../services/auth.service';
 
 export function LoginPage() {
@@ -17,17 +17,23 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
+  const [error, setError] = useState('');
 
   // Load organizations on component mount
   useEffect(() => {
     const loadOrganizations = async () => {
       try {
         setLoadingOrgs(true);
+        setError('');
         const orgs = await authService.getOrganizations();
         setOrganizations(orgs);
+        
+        if (orgs.length === 0) {
+          setError('No organizations available. Please contact your administrator.');
+        }
       } catch (error) {
         console.error('Failed to load organizations:', error);
-        toast.error('Failed to load organizations');
+        setError('Failed to load organizations. Please check your connection.');
       } finally {
         setLoadingOrgs(false);
       }
@@ -39,8 +45,14 @@ export function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
     try {
+      if (!selectedOrg) {
+        setError('Please select an organization');
+        return;
+      }
+
       const response = await authService.login({
         email,
         password,
@@ -51,27 +63,14 @@ export function LoginPage() {
         login(response.user);
         toast.success('Login successful');
       } else {
-        toast.error(response.error || 'Login failed');
+        setError(response.error || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Login failed. Please try again.');
+      setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemoCredentials = (userType: 'admin' | 'advertiser' | 'publisher') => {
-    const demoCredentials = {
-      admin: { email: 'admin@adtech.com', password: 'admin123', orgId: '1' },
-      advertiser: { email: 'advertiser@digital.com', password: 'advertiser123', orgId: '2' },
-      publisher: { email: 'publisher@brand.com', password: 'publisher123', orgId: '3' }
-    };
-
-    const creds = demoCredentials[userType];
-    setEmail(creds.email);
-    setPassword(creds.password);
-    setSelectedOrg(creds.orgId);
   };
 
   // Convert organizations to selector options
@@ -112,6 +111,7 @@ export function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -128,6 +128,7 @@ export function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-9"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -141,50 +142,30 @@ export function LoginPage() {
                     onValueChange={setSelectedOrg}
                     options={organizationOptions}
                     placeholder={loadingOrgs ? "Loading organizations..." : "Select your organization"}
-                    disabled={loadingOrgs}
+                    disabled={loadingOrgs || loading}
                     className="pl-9"
+                    error={!!error && !selectedOrg}
                   />
                 </div>
               </div>
+
+              {error && (
+                <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{error}</span>
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={loading || loadingOrgs}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
 
-            <div className="mt-6 space-y-2">
-              <p className="text-sm text-muted-foreground text-center mb-3">
-                Demo Accounts:
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <h3 className="text-sm font-medium text-blue-900 mb-2">Need Help?</h3>
+              <p className="text-sm text-blue-700">
+                If you don't have an account or need assistance, please contact your system administrator.
               </p>
-              <div className="grid gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fillDemoCredentials('admin')}
-                  disabled={loadingOrgs}
-                >
-                  Demo Admin
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fillDemoCredentials('advertiser')}
-                  disabled={loadingOrgs}
-                >
-                  Demo Advertiser
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fillDemoCredentials('publisher')}
-                  disabled={loadingOrgs}
-                >
-                  Demo Publisher
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
