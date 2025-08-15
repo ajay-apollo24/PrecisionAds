@@ -7,7 +7,7 @@ echo "🚀 Precision Ads API Testing"
 echo "=============================="
 
 # Default values
-BASE_URL=${1:-"http://localhost:3001"}
+BASE_URL=${1:-"http://localhost:7401"}
 TEST_SUITE=${2:-"0"}
 
 echo "🌐 Base URL: $BASE_URL"
@@ -30,10 +30,10 @@ echo "🧪 Starting API tests..."
 # Run the test suite
 if [ "$TEST_SUITE" = "0" ]; then
     echo "🎯 Running all test suites..."
-    npx tsx src/testing/run-tests.ts "$BASE_URL" 0
+    npx tsx testing/run-tests.ts "$BASE_URL" 0
 else
     echo "🎯 Running test suite $TEST_SUITE..."
-    npx tsx src/testing/run-tests.ts "$BASE_URL" "$TEST_SUITE"
+    npx tsx testing/run-tests.ts "$BASE_URL" "$TEST_SUITE"
 fi
 
 echo ""
