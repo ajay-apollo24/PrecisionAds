@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Progress } from '../ui/progress';
+import { Button } from '../ui/button';
 import { 
   Building2, 
   Users, 
@@ -16,63 +17,102 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  BarChart3
+  BarChart3,
+  RefreshCw
 } from 'lucide-react';
-
-interface MetricData {
-  totalOrganizations: number;
-  totalUsers: number;
-  activeApiKeys: number;
-  platformRevenue: number;
-  campaignPerformance: {
-    active: number;
-    total: number;
-    avgCTR: number;
-    avgCPC: number;
-  };
-  publisherEarnings: {
-    total: number;
-    activePublishers: number;
-    avgRevenue: number;
-  };
-}
+import { dashboardService, DashboardMetrics, Organization, User, APIKey } from '../../services/dashboard.service';
+import { toast } from '../ui/sonner';
 
 export function DataMetricsDashboard() {
-  const [metrics, setMetrics] = useState<MetricData>({
-    totalOrganizations: 24,
-    totalUsers: 1234,
-    activeApiKeys: 89,
-    platformRevenue: 45231,
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalOrganizations: 0,
+    totalUsers: 0,
+    activeApiKeys: 0,
+    platformRevenue: 0,
     campaignPerformance: {
-      active: 156,
-      total: 234,
-      avgCTR: 3.2,
-      avgCPC: 2.45
+      active: 0,
+      total: 0,
+      avgCTR: 0,
+      avgCPC: 0
     },
     publisherEarnings: {
-      total: 15678,
-      activePublishers: 18,
-      avgRevenue: 871
+      total: 0,
+      activePublishers: 0,
+      avgRevenue: 0
     }
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Simulate real-time updates
+  // Load initial data
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  // Load all dashboard data
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const [
+        metricsData,
+        organizationsData,
+        usersData,
+        apiKeysData
+      ] = await Promise.all([
+        dashboardService.refreshMetrics(),
+        dashboardService.getOrganizations(),
+        dashboardService.getUsers(),
+        dashboardService.getAPIKeys()
+      ]);
+
+      setMetrics(metricsData);
+      setOrganizations(organizationsData);
+      setUsers(usersData);
+      setApiKeys(apiKeysData);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh metrics
+  const refreshMetrics = async () => {
+    try {
+      setIsRefreshing(true);
+      const newMetrics = await dashboardService.refreshMetrics();
+      setMetrics(newMetrics);
+      toast.success('Metrics refreshed successfully');
+    } catch (error) {
+      console.error('Failed to refresh metrics:', error);
+      toast.error('Failed to refresh metrics');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Simulate real-time updates (only for demo purposes)
   useEffect(() => {
     const interval = setInterval(() => {
-      setMetrics(prev => ({
-        ...prev,
-        platformRevenue: prev.platformRevenue + Math.floor(Math.random() * 100),
-        campaignPerformance: {
-          ...prev.campaignPerformance,
-          avgCTR: prev.campaignPerformance.avgCTR + (Math.random() - 0.5) * 0.1
-        }
-      }));
+      if (!isLoading) {
+        setMetrics(prev => ({
+          ...prev,
+          platformRevenue: prev.platformRevenue + Math.floor(Math.random() * 50),
+          campaignPerformance: {
+            ...prev.campaignPerformance,
+            avgCTR: Math.max(0, prev.campaignPerformance.avgCTR + (Math.random() - 0.5) * 0.1)
+          }
+        }));
+      }
     }, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isLoading]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -89,6 +129,27 @@ export function DataMetricsDashboard() {
     return num.toString();
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -98,10 +159,21 @@ export function DataMetricsDashboard() {
             Comprehensive platform analytics and performance metrics
           </p>
         </div>
-        <Badge variant="secondary" className="flex items-center gap-2">
-          <Activity className="h-4 w-4" />
-          Live Updates
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={refreshMetrics}
+            disabled={isRefreshing}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Badge variant="secondary" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Live Updates
+          </Badge>
+        </div>
       </div>
 
       {/* Key Metrics Grid */}
@@ -114,9 +186,12 @@ export function DataMetricsDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(metrics.totalOrganizations)}</div>
             <p className="text-xs text-muted-foreground">
-              +2 from last month
+              {organizations.filter(org => org.status === 'ACTIVE').length} active
             </p>
-            <Progress value={75} className="mt-2" />
+            <Progress 
+              value={(organizations.filter(org => org.status === 'ACTIVE').length / Math.max(metrics.totalOrganizations, 1)) * 100} 
+              className="mt-2" 
+            />
           </CardContent>
         </Card>
 
@@ -128,9 +203,12 @@ export function DataMetricsDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(metrics.totalUsers)}</div>
             <p className="text-xs text-muted-foreground">
-              +12 from last month
+              {users.filter(user => user.status === 'ACTIVE').length} active
             </p>
-            <Progress value={68} className="mt-2" />
+            <Progress 
+              value={(users.filter(user => user.status === 'ACTIVE').length / Math.max(metrics.totalUsers, 1)) * 100} 
+              className="mt-2" 
+            />
           </CardContent>
         </Card>
 
@@ -142,9 +220,12 @@ export function DataMetricsDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(metrics.activeApiKeys)}</div>
             <p className="text-xs text-muted-foreground">
-              +5 from last month
+              {apiKeys.filter(key => key.status === 'ACTIVE').length} of {apiKeys.length} total
             </p>
-            <Progress value={82} className="mt-2" />
+            <Progress 
+              value={(apiKeys.filter(key => key.status === 'ACTIVE').length / Math.max(apiKeys.length, 1)) * 100} 
+              className="mt-2" 
+            />
           </CardContent>
         </Card>
 
@@ -156,9 +237,9 @@ export function DataMetricsDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(metrics.platformRevenue)}</div>
             <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+              Monthly recurring revenue
             </p>
-            <Progress value={88} className="mt-2" />
+            <Progress value={75} className="mt-2" />
           </CardContent>
         </Card>
       </div>
@@ -168,7 +249,9 @@ export function DataMetricsDashboard() {
         <TabsList>
           <TabsTrigger value="campaigns">Campaign Performance</TabsTrigger>
           <TabsTrigger value="publishers">Publisher Earnings</TabsTrigger>
-          <TabsTrigger value="realtime">Real-time Data</TabsTrigger>
+          <TabsTrigger value="organizations">Organizations</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="apikeys">API Keys</TabsTrigger>
         </TabsList>
 
         <TabsContent value="campaigns" className="space-y-4">
@@ -190,7 +273,7 @@ export function DataMetricsDashboard() {
                   <p className="text-sm text-muted-foreground">Total Campaigns</p>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{metrics.campaignPerformance.avgCTR}%</div>
+                  <div className="text-2xl font-bold text-purple-600">{metrics.campaignPerformance.avgCTR.toFixed(1)}%</div>
                   <p className="text-sm text-muted-foreground">Avg CTR</p>
                 </div>
                 <div className="text-center">
@@ -198,45 +281,6 @@ export function DataMetricsDashboard() {
                   <p className="text-sm text-muted-foreground">Avg CPC</p>
                 </div>
               </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Campaign Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Impressions</TableHead>
-                    <TableHead>CTR</TableHead>
-                    <TableHead>Spend</TableHead>
-                    <TableHead>Performance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>Summer Sale Campaign</TableCell>
-                    <TableCell><Badge variant="default">Active</Badge></TableCell>
-                    <TableCell>2.4M</TableCell>
-                    <TableCell>4.2%</TableCell>
-                    <TableCell>{formatCurrency(4250)}</TableCell>
-                    <TableCell><Progress value={85} className="w-20" /></TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Brand Awareness</TableCell>
-                    <TableCell><Badge variant="secondary">Paused</Badge></TableCell>
-                    <TableCell>1.8M</TableCell>
-                    <TableCell>3.1%</TableCell>
-                    <TableCell>{formatCurrency(2800)}</TableCell>
-                    <TableCell><Progress value={62} className="w-20" /></TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Product Launch</TableCell>
-                    <TableCell><Badge variant="default">Active</Badge></TableCell>
-                    <TableCell>3.1M</TableCell>
-                    <TableCell>5.8%</TableCell>
-                    <TableCell>{formatCurrency(5400)}</TableCell>
-                    <TableCell><Progress value={92} className="w-20" /></TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -244,13 +288,13 @@ export function DataMetricsDashboard() {
         <TabsContent value="publishers" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Publisher Earnings Summary</CardTitle>
+              <CardTitle>Publisher Earnings Overview</CardTitle>
               <CardDescription>
-                Overview of publisher performance and revenue metrics
+                Revenue distribution and performance across publisher organizations
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+              <div className="grid gap-4 md:grid-cols-3 mb-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{formatCurrency(metrics.publisherEarnings.total)}</div>
                   <p className="text-sm text-muted-foreground">Total Earnings</p>
@@ -263,129 +307,169 @@ export function DataMetricsDashboard() {
                   <div className="text-2xl font-bold text-purple-600">{formatCurrency(metrics.publisherEarnings.avgRevenue)}</div>
                   <p className="text-sm text-muted-foreground">Avg Revenue</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">156K</div>
-                  <p className="text-sm text-muted-foreground">Total Page Views</p>
-                </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
+        <TabsContent value="organizations" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Organizations Overview</CardTitle>
+              <CardDescription>
+                All organizations in the platform with their status and type
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Publisher Site</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Ad Units</TableHead>
-                    <TableHead>Page Views</TableHead>
-                    <TableHead>Revenue</TableHead>
-                    <TableHead>Performance</TableHead>
+                    <TableHead>Created</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell>TechBlog.com</TableCell>
-                    <TableCell><Badge variant="default">Active</Badge></TableCell>
-                    <TableCell>6</TableCell>
-                    <TableCell>45K</TableCell>
-                    <TableCell>{formatCurrency(1250)}</TableCell>
-                    <TableCell><Progress value={78} className="w-20" /></TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>LifestyleMag.net</TableCell>
-                    <TableCell><Badge variant="default">Active</Badge></TableCell>
-                    <TableCell>4</TableCell>
-                    <TableCell>32K</TableCell>
-                    <TableCell>{formatCurrency(890)}</TableCell>
-                    <TableCell><Progress value={65} className="w-20" /></TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>NewsPortal.org</TableCell>
-                    <TableCell><Badge variant="secondary">Pending</Badge></TableCell>
-                    <TableCell>8</TableCell>
-                    <TableCell>67K</TableCell>
-                    <TableCell>{formatCurrency(1100)}</TableCell>
-                    <TableCell><Progress value={45} className="w-20" /></TableCell>
-                  </TableRow>
+                  {organizations.map((org) => (
+                    <TableRow key={org.id}>
+                      <TableCell className="font-medium">{org.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{org.orgType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={org.status === 'ACTIVE' ? 'default' : 'secondary'}
+                          className="flex items-center gap-1"
+                        >
+                          {org.status === 'ACTIVE' ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            <Clock className="h-3 w-3" />
+                          )}
+                          {org.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(org.createdAt)}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="realtime" className="space-y-4">
+        <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Real-time Performance Metrics</CardTitle>
+              <CardTitle>Users Overview</CardTitle>
               <CardDescription>
-                Live updates of platform performance and key indicators
+                All users in the platform with their roles and status
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">2.4M</div>
-                  <p className="text-sm text-muted-foreground">Live Impressions</p>
-                  <Badge variant="outline" className="mt-2">
-                    <Activity className="h-3 w-3 mr-1" />
-                    Live
-                  </Badge>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">156K</div>
-                  <p className="text-sm text-muted-foreground">Live Clicks</p>
-                  <Badge variant="outline" className="mt-2">
-                    <Activity className="h-3 w-3 mr-1" />
-                    Live
-                  </Badge>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">$1,234</div>
-                  <p className="text-sm text-muted-foreground">Live Revenue</p>
-                  <Badge variant="outline" className="mt-2">
-                    <Activity className="h-3 w-3 mr-1" />
-                    Live
-                  </Badge>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">89</div>
-                  <p className="text-sm text-muted-foreground">Active Sessions</p>
-                  <Badge variant="outline" className="mt-2">
-                    <Activity className="h-3 w-3 mr-1" />
-                    Live
-                  </Badge>
-                </div>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Organization</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        {user.firstName} {user.lastName}
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{user.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={user.status === 'ACTIVE' ? 'default' : 'secondary'}
+                          className="flex items-center gap-1"
+                        >
+                          {user.status === 'ACTIVE' ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            <Clock className="h-3 w-3" />
+                          )}
+                          {user.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{user.organizationName}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Performance Alerts</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-yellow-50">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">High CTR Alert</p>
-                      <p className="text-sm text-muted-foreground">Campaign "Summer Sale" CTR increased by 15%</p>
-                    </div>
-                    <Badge variant="outline">2 min ago</Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Revenue Milestone</p>
-                      <p className="text-sm text-muted-foreground">Daily revenue target achieved</p>
-                    </div>
-                    <Badge variant="outline">5 min ago</Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-blue-50">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Campaign Ending</p>
-                      <p className="text-sm text-muted-foreground">"Brand Awareness" campaign ends in 2 hours</p>
-                    </div>
-                    <Badge variant="outline">10 min ago</Badge>
-                  </div>
-                </div>
-              </div>
+        <TabsContent value="apikeys" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>API Keys Overview</CardTitle>
+              <CardDescription>
+                All API keys with their permissions and usage status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Organization</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Permissions</TableHead>
+                    <TableHead>Last Used</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {apiKeys.map((key) => (
+                    <TableRow key={key.id}>
+                      <TableCell className="font-medium">{key.name}</TableCell>
+                      <TableCell>{key.userName}</TableCell>
+                      <TableCell>{key.organizationName}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={key.status === 'ACTIVE' ? 'default' : 'secondary'}
+                          className="flex items-center gap-1"
+                        >
+                          {key.status === 'ACTIVE' ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            <AlertTriangle className="h-3 w-3" />
+                          )}
+                          {key.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {key.permissions.slice(0, 3).map((permission, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {permission}
+                            </Badge>
+                          ))}
+                          {key.permissions.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{key.permissions.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Never'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

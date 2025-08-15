@@ -8,7 +8,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'advertiser' | 'publisher';
+  role: 'super_admin' | 'admin' | 'advertiser' | 'publisher';
   organizationId: string;
   organizationName: string;
 }

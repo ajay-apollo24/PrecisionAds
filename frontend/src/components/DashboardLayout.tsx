@@ -6,10 +6,13 @@ import { PublisherDashboard } from './dashboards/PublisherDashboard';
 import { DataMetricsDashboard } from './dashboards/DataMetricsDashboard';
 import { AuthManagementDashboard } from './dashboards/AuthManagementDashboard';
 import { RealTimeDashboard } from './dashboards/RealTimeDashboard';
+import { OrganizationManagement } from './admin/OrganizationManagement';
+import { UserManagement } from './admin/UserManagement';
+import { APIKeysManagement } from './admin/APIKeysManagement';
 import { Sidebar } from './ui/sidebar';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { LogOut, User, Settings, BarChart3, Shield, Activity } from 'lucide-react';
+import { LogOut, User, Settings, BarChart3, Shield, Activity, Building2, Users, Key } from 'lucide-react';
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -34,6 +37,9 @@ export function DashboardLayout() {
       case 'admin':
         return [
           { value: 'main', label: 'Main Dashboard', icon: BarChart3 },
+          { value: 'organizations', label: 'Organizations', icon: Building2 },
+          { value: 'users', label: 'Users', icon: Users },
+          { value: 'api-keys', label: 'API Keys', icon: Key },
           { value: 'metrics', label: 'Data Metrics', icon: BarChart3 },
           { value: 'auth', label: 'Auth Management', icon: Shield },
           { value: 'realtime', label: 'Real-time Data', icon: Activity }
@@ -64,25 +70,25 @@ export function DashboardLayout() {
       case 'realtime':
         return <RealTimeDashboard />;
       case 'organizations':
-        return <OrganizationsScreen />;
+        return <OrganizationManagement />;
       case 'users':
-        return <UsersScreen />;
+        return <UserManagement />;
       case 'api-keys':
-        return <APIKeysScreen />;
+        return <APIKeysManagement />;
       case 'campaigns':
-        return <CampaignsScreen />;
+        return <div>Campaigns Screen - Coming Soon</div>;
       case 'analytics':
-        return <AnalyticsScreen />;
+        return <div>Analytics Screen - Coming Soon</div>;
       case 'audiences':
-        return <AudiencesScreen />;
+        return <div>Audiences Screen - Coming Soon</div>;
       case 'sites':
-        return <SitesScreen />;
+        return <div>Sites Screen - Coming Soon</div>;
       case 'ad-units':
-        return <AdUnitsScreen />;
+        return <div>Ad Units Screen - Coming Soon</div>;
       case 'earnings':
-        return <EarningsScreen />;
+        return <div>Earnings Screen - Coming Soon</div>;
       case 'settings':
-        return <SettingsScreen />;
+        return <div>Settings Screen - Coming Soon</div>;
       default:
         return renderMainDashboard();
     }

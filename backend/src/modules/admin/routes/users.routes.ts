@@ -10,22 +10,44 @@ import {
 import { authenticateToken, AuthenticatedRequest } from '../../../shared/middleware/auth.middleware';
 
 export function setupUserRoutes(app: Express, prefix: string): void {
-  // Get all users (admin only)
+  console.log(`Setting up user routes with prefix: ${prefix}`);
+  
+  // Test endpoint to verify route is working
+  app.get(`${prefix}/users/test`, (req: Request, res: Response) => {
+    console.log(`GET ${prefix}/users/test - Test endpoint hit`);
+    res.json({
+      success: true,
+      message: 'Users route is working',
+      prefix: prefix,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Get users (super admin sees all, regular admin sees only their organization)
   app.get(`${prefix}/users`, 
     authenticateToken,
     requireRole(['SUPER_ADMIN', 'ADMIN']),
-    async (req: Request, res: Response) => {
+    async (req: AuthenticatedRequest, res: Response) => {
+      console.log(`GET ${prefix}/users - Request received`);
       try {
         const { role, status, organizationId, email } = req.query;
+        
+        // Check if user is super admin or regular admin
+        const isSuperAdmin = req.user!.role === 'SUPER_ADMIN';
+        const userOrganizationId = req.user!.organizationId;
+        
+        console.log('User role and organization:', { role: req.user!.role, organizationId: userOrganizationId, isSuperAdmin });
         
         const filters = {
           role: role as string,
           status: status as string,
-          organizationId: organizationId as string,
+          organizationId: isSuperAdmin ? (organizationId as string) : userOrganizationId,
           email: email as string
         };
 
+        console.log('Fetching users with filters:', filters);
         const users = await UserService.getUsers(filters);
+        console.log(`Found ${users.length} users`);
 
         res.json({
           success: true,
@@ -33,6 +55,7 @@ export function setupUserRoutes(app: Express, prefix: string): void {
           count: users.length
         });
       } catch (error: any) {
+        console.error('Error in users route:', error);
         if (error.statusCode) {
           res.status(error.statusCode).json({ error: error.message });
         } else {
@@ -104,17 +127,26 @@ export function setupUserRoutes(app: Express, prefix: string): void {
     authenticateToken,
     requireRole(['SUPER_ADMIN', 'ADMIN']),
     async (req: AuthenticatedRequest, res: Response) => {
+      console.log(`POST ${prefix}/users - User creation request received`);
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      console.log('Authenticated user:', req.user ? { id: req.user.id, email: req.user.email, role: req.user.role } : 'No user');
+      
       try {
-        const { email, password, firstName, lastName, role, organizationId, permissions } = req.body;
+        const { email, password, firstName, lastName, role, status, organizationId, permissions } = req.body;
 
         if (!email || !password || !firstName || !lastName || !role) {
+          console.log('Validation failed - missing required fields');
           throw createError('Email, password, first name, last name, and role are required', 400);
         }
 
+        console.log('Creating user with data:', { email, firstName, lastName, role, status, organizationId, permissions: permissions ? 'provided' : 'not provided' });
+
         const user = await UserService.createUser(
-          { email, password, firstName, lastName, role, organizationId, permissions },
+          { email, password, firstName, lastName, role, status, organizationId, permissions },
           req.user!.id
         );
+
+        console.log('User created successfully:', { id: user.id, email: user.email });
 
         res.status(201).json({
           success: true,
@@ -122,6 +154,13 @@ export function setupUserRoutes(app: Express, prefix: string): void {
           data: user
         });
       } catch (error: any) {
+        console.error('Error in user creation route:', error);
+        console.error('Error details:', {
+          message: error.message,
+          statusCode: error.statusCode,
+          stack: error.stack
+        });
+        
         if (error.statusCode) {
           res.status(error.statusCode).json({ error: error.message });
         } else {

@@ -9,6 +9,7 @@ export interface CreateUserData {
   firstName: string;
   lastName: string;
   role: string;
+  status?: string;
   organizationId?: string;
   permissions?: string[];
 }
@@ -64,7 +65,7 @@ export class UserService {
               lastName: data.lastName,
               role: data.role as any,
               organizationId: data.organizationId,
-              status: 'PENDING'
+              status: (data.status as any) || 'PENDING'
             },
             include: {
               organization: {

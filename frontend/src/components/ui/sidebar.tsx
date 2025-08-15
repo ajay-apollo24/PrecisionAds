@@ -30,9 +30,9 @@ interface SidebarProps {
 export function Sidebar({ open, onOpenChange, activeTab, onTabChange }: SidebarProps) {
   const { user } = useAuth();
 
-  const getMenuItems = () => {
+    const getMenuItems = () => {
     switch (user?.role) {
-      case 'admin':
+      case 'super_admin':
         return [
           { 
             icon: BarChart3, 
@@ -75,6 +75,51 @@ export function Sidebar({ open, onOpenChange, activeTab, onTabChange }: SidebarP
             label: 'API Keys', 
             tab: 'api-keys',
             description: 'API key management'
+          },
+          { 
+            icon: Settings, 
+            label: 'Settings', 
+            tab: 'settings',
+            description: 'System configuration'
+          },
+        ];
+      case 'admin':
+        return [
+          { 
+            icon: BarChart3, 
+            label: 'Main Dashboard', 
+            tab: 'main',
+            description: 'Overview and key metrics'
+          },
+          { 
+            icon: PieChart, 
+            label: 'Data Metrics', 
+            tab: 'metrics',
+            description: 'Users and revenue data for your organization'
+          },
+          { 
+            icon: Shield, 
+            label: 'Auth Management', 
+            tab: 'auth',
+            description: 'Users, API keys, and permissions'
+          },
+          { 
+            icon: Activity, 
+            label: 'Real-time Data', 
+            tab: 'realtime',
+            description: 'Live performance and alerts'
+          },
+          { 
+            icon: Users, 
+            label: 'Users', 
+            tab: 'users',
+            description: 'User management and roles (your organization only)'
+          },
+          { 
+            icon: Key, 
+            label: 'API Keys', 
+            tab: 'api-keys',
+            description: 'API key management (your organization only)'
           },
           { 
             icon: Settings, 

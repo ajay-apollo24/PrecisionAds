@@ -24,40 +24,75 @@ export async function authenticateToken(
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
+    console.log('🔐 Authentication attempt:', {
+      path: req.path,
+      method: req.method,
+      hasAuthHeader: !!authHeader,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      authHeaderValue: authHeader,
+      tokenValue: token,
+      allHeaders: Object.keys(req.headers),
+      contentType: req.headers['content-type'],
+      userAgent: req.headers['user-agent']
+    });
+
     if (!token) {
+      console.log('❌ No token provided');
       throw createError('Access token required', 401);
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-    
-    // Get user from database to ensure they still exist and are active
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        status: true,
-        organizationId: true
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+      console.log('✅ Token verified, decoded userId:', decoded.userId);
+      
+      // Get user from database to ensure they still exist and are active
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          status: true,
+          organizationId: true
+        }
+      });
+
+      if (!user) {
+        console.log('❌ User not found in database for userId:', decoded.userId);
+        throw createError('User not found', 401);
       }
+
+      if (user.status !== 'ACTIVE') {
+        console.log('❌ User account not active:', { userId: user.id, status: user.status });
+        throw createError('User account is not active', 401);
+      }
+
+      console.log('✅ User authenticated successfully:', {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      });
+
+      req.user = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        organizationId: user.organizationId || undefined
+      };
+      next();
+    } catch (jwtError) {
+      console.log('❌ JWT verification failed:', jwtError);
+      throw jwtError;
+    }
+  } catch (error: any) {
+    console.error('❌ Authentication failed:', {
+      error: error.message,
+      statusCode: error.statusCode,
+      type: error.constructor.name
     });
-
-    if (!user) {
-      throw createError('User not found', 401);
-    }
-
-    if (user.status !== 'ACTIVE') {
-      throw createError('User account is not active', 401);
-    }
-
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      organizationId: user.organizationId || undefined
-    };
-    next();
-  } catch (error) {
+    
     if (error instanceof jwt.JsonWebTokenError) {
       res.status(401).json({ error: 'Invalid token' });
     } else if (error && typeof error === 'object' && 'statusCode' in error) {
@@ -74,16 +109,35 @@ export async function authenticateToken(
 export function requireRole(roles: string[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     try {
+      console.log('🔒 Role check:', {
+        path: req.path,
+        method: req.method,
+        requiredRoles: roles,
+        userRole: req.user?.role,
+        hasUser: !!req.user
+      });
+
       if (!req.user) {
-      throw createError('Authentication required', 401);
+        console.log('❌ No authenticated user found');
+        throw createError('Authentication required', 401);
       }
 
       if (!roles.includes(req.user.role)) {
+        console.log('❌ Insufficient permissions:', {
+          userRole: req.user.role,
+          requiredRoles: roles
+        });
         throw createError('Insufficient permissions', 403);
       }
 
+      console.log('✅ Role check passed for user:', req.user.role);
       next();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Role check failed:', {
+        error: error.message,
+        statusCode: error.statusCode
+      });
+      
       if (error && typeof error === 'object' && 'statusCode' in error) {
         res.status((error as any).statusCode).json({ error: (error as any).message });
       } else {

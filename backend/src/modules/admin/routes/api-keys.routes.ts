@@ -3,7 +3,8 @@ import { createError } from '../../../shared/middleware/error-handler';
 import { 
   withOrganization, 
   requirePermission,
-  requireRole 
+  requireRole,
+  RBACRequest
 } from '../../../shared/middleware/rbac.middleware';
 import { authenticateToken, AuthenticatedRequest } from '../../../shared/middleware/auth.middleware';
 import { prisma } from '../../../shared/database/prisma';
@@ -13,19 +14,38 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 export function setupAPIKeyRoutes(app: Express, prefix: string): void {
-  // Get all API keys for organization
+  console.log(`Setting up API key routes with prefix: ${prefix}`);
+  
+  // Test endpoint to verify route is working
+  app.get(`${prefix}/api-keys/test`, (req: Request, res: Response) => {
+    console.log(`GET ${prefix}/api-keys/test - Test endpoint hit`);
+    res.json({
+      success: true,
+      message: 'API Keys route is working',
+      prefix: prefix,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Get API keys (super admin sees all, regular admin sees only their organization)
   app.get(`${prefix}/api-keys`,
     authenticateToken,
-    withOrganization,
-    requirePermission(['USERS_READ']),
-    async (req: Request, res: Response) => {
+    requireRole(['SUPER_ADMIN', 'ADMIN']),
+    async (req: AuthenticatedRequest, res: Response) => {
+      console.log(`GET ${prefix}/api-keys - Request received`);
       try {
+        // Check if user is super admin or regular admin
+        const isSuperAdmin = req.user!.role === 'SUPER_ADMIN';
+        const userOrganizationId = req.user!.organizationId;
+        
+        console.log('User role and organization:', { role: req.user!.role, organizationId: userOrganizationId, isSuperAdmin });
+        
         const apiKeys = await withQueryLogging(
           'get_api_keys',
-          { organizationId: req.organizationId },
+          { admin: true, isSuperAdmin, userOrganizationId },
           async () => {
             return await prisma.aPIKey.findMany({
-              where: { organizationId: req.organizationId },
+              where: isSuperAdmin ? {} : { organizationId: userOrganizationId },
               include: {
                 user: {
                   select: {
@@ -33,6 +53,12 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
                     email: true,
                     firstName: true,
                     lastName: true
+                  }
+                },
+                organization: {
+                  select: {
+                    id: true,
+                    name: true
                   }
                 }
               },
@@ -42,12 +68,31 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
           { operation: 'api_key_listing' }
         );
 
+        console.log(`Found ${apiKeys.length} API keys`);
+
+        // Transform the data to match the frontend expectations
+        const transformedApiKeys = apiKeys.map(key => ({
+          id: key.id,
+          name: key.name,
+          keyHash: key.keyHash,
+          status: key.status,
+          permissions: key.scopes || [],
+          userId: key.userId,
+          userName: key.user ? `${key.user.firstName} ${key.user.lastName}` : 'Unknown',
+          organizationId: key.organizationId,
+          organizationName: key.organization ? key.organization.name : 'Unknown',
+          createdAt: key.createdAt,
+          lastUsedAt: key.lastUsedAt,
+          expiresAt: key.expiresAt
+        }));
+
         res.json({
           success: true,
-          data: apiKeys,
-          count: apiKeys.length
+          data: transformedApiKeys,
+          count: transformedApiKeys.length
         });
       } catch (error: any) {
+        console.error('Error in API keys route:', error);
         if (error.statusCode) {
           res.status(error.statusCode).json({ error: error.message });
         } else {
@@ -60,15 +105,40 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
   // Create new API key
   app.post(`${prefix}/api-keys`,
     authenticateToken,
-    withOrganization,
-    requirePermission(['USERS_WRITE']),
+    requireRole(['SUPER_ADMIN', 'ADMIN']),
     async (req: AuthenticatedRequest, res: Response) => {
       try {
-        const { name, userId, scopes, expiresAt } = req.body;
+        const { name, userId, scopes, expiresAt, organizationId } = req.body;
 
         if (!name || !userId || !scopes || !Array.isArray(scopes)) {
           throw createError('Name, userId, and scopes array are required', 400);
         }
+
+        // Check if user is super admin or regular admin
+        const isSuperAdmin = req.user!.role === 'SUPER_ADMIN';
+        const userOrganizationId = req.user!.organizationId;
+        
+        // Determine which organization to use for the API key
+        let targetOrganizationId: string;
+        if (isSuperAdmin) {
+          // Super admin can specify any organization or use their own
+          targetOrganizationId = organizationId || userOrganizationId;
+        } else {
+          // Regular admin can only create keys for their own organization
+          targetOrganizationId = userOrganizationId;
+          
+          // If they try to specify a different organization, reject it
+          if (organizationId && organizationId !== userOrganizationId) {
+            throw createError('You can only create API keys for your own organization', 403);
+          }
+        }
+
+        console.log('Creating API key:', { 
+          isSuperAdmin, 
+          userOrganizationId, 
+          targetOrganizationId, 
+          requestedOrganizationId: organizationId 
+        });
 
         // Generate API key
         const apiKey = crypto.randomBytes(32).toString('hex');
@@ -76,13 +146,13 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
 
         const apiKeyRecord = await withQueryLogging(
           'create_api_key',
-          { name, userId, scopes, expiresAt },
+          { name, userId, scopes, expiresAt, targetOrganizationId },
           async () => {
             return await prisma.aPIKey.create({
               data: {
                 name,
                 keyHash,
-                organizationId: req.organizationId!,
+                organizationId: targetOrganizationId,
                 userId,
                 scopes: scopes as any[],
                 status: 'ACTIVE',

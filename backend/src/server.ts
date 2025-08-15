@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -15,6 +15,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 7401;
+const apiPrefix = '/api/v1';
 
 // Security middleware
 app.use(helmet());
@@ -43,14 +44,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Organization-Id']
 }));
 
-// Rate limiting
+// Rate limiting - More lenient for development
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), // 1 minute for development
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'), // 1000 requests per minute for development
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and OPTIONS requests
+    return req.path === '/health' || req.method === 'OPTIONS';
+  }
 });
+
 app.use(limiter);
 
 // Body parsing middleware
@@ -63,8 +69,37 @@ app.use(compression());
 // Logging middleware
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
 
+// Simple request counter for debugging
+let requestCount = 0;
+app.use((req: Request, res: Response, next: NextFunction) => {
+  requestCount++;
+  if (requestCount % 10 === 0) { // Log every 10th request
+    logger.info(`Request count: ${requestCount}, Current path: ${req.path}`);
+  }
+  next();
+});
+
+// Detailed request logging for debugging
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Only log for admin routes to avoid spam
+  if (req.path.startsWith('/api/v1/admin')) {
+    console.log('📥 Incoming Request Details:', {
+      method: req.method,
+      path: req.path,
+      headers: {
+        authorization: req.headers.authorization ? `${req.headers.authorization.substring(0, 50)}...` : 'none',
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent']
+      },
+      body: req.body ? Object.keys(req.body) : 'no body',
+      query: req.query ? Object.keys(req.query) : 'no query'
+    });
+  }
+  next();
+});
+
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -80,11 +115,23 @@ setupRoutes(app);
 app.use(errorHandler);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (req: Request, res: Response) => {
+  logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
+  logger.warn(`Available routes: ${apiPrefix}/admin/*, ${apiPrefix}/auth/*, ${apiPrefix}/publisher/*, ${apiPrefix}/advertiser/*`);
+  
   res.status(404).json({
     error: 'Not Found',
     message: `Route ${req.originalUrl} not found`,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    availableRoutes: [
+      `${apiPrefix}/admin/organizations`,
+      `${apiPrefix}/admin/users`, 
+      `${apiPrefix}/admin/api-keys`,
+      `${apiPrefix}/auth/login`,
+      `${apiPrefix}/auth/organizations`,
+      `${apiPrefix}/publisher/sites`,
+      `${apiPrefix}/advertiser/campaigns`
+    ]
   });
 });
 

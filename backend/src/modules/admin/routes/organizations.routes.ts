@@ -10,21 +10,45 @@ import {
 import { authenticateToken, AuthenticatedRequest } from '../../../shared/middleware/auth.middleware';
 
 export function setupOrganizationRoutes(app: Express, prefix: string): void {
-  // Get all organizations (admin only)
+  console.log(`Setting up organization routes with prefix: ${prefix}`);
+  
+  // Test endpoint to verify route is working
+  app.get(`${prefix}/organizations/test`, (req: Request, res: Response) => {
+    console.log(`GET ${prefix}/organizations/test - Test endpoint hit`);
+    res.json({
+      success: true,
+      message: 'Organizations route is working',
+      prefix: prefix,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Get organizations (super admin sees all, regular admin sees only their own)
   app.get(`${prefix}/organizations`, 
     authenticateToken,
     requireRole(['SUPER_ADMIN', 'ADMIN']),
-    async (req: Request, res: Response) => {
+    async (req: AuthenticatedRequest, res: Response) => {
+      console.log(`GET ${prefix}/organizations - Request received`);
       try {
         const { orgType, status, domain } = req.query;
+        
+        // Check if user is super admin or regular admin
+        const isSuperAdmin = req.user!.role === 'SUPER_ADMIN';
+        const userOrganizationId = req.user!.organizationId;
+        
+        console.log('User role and organization:', { role: req.user!.role, organizationId: userOrganizationId, isSuperAdmin });
         
         const filters = {
           orgType: orgType as string,
           status: status as string,
-          domain: domain as string
+          domain: domain as string,
+          // Regular admins can only see their own organization
+          ...(isSuperAdmin ? {} : { id: userOrganizationId })
         };
 
+        console.log('Fetching organizations with filters:', filters);
         const organizations = await OrganizationService.getOrganizations(filters);
+        console.log(`Found ${organizations.length} organizations`);
 
         res.json({
           success: true,
@@ -32,6 +56,7 @@ export function setupOrganizationRoutes(app: Express, prefix: string): void {
           count: organizations.length
         });
       } catch (error: any) {
+        console.error('Error in organizations route:', error);
         if (error.statusCode) {
           res.status(error.statusCode).json({ error: error.message });
         } else {

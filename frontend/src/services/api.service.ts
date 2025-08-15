@@ -4,12 +4,21 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+    this.baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:7401';
   }
 
   // Get authentication headers
   private getAuthHeaders(): HeadersInit {
     const token = authService.getToken();
+    
+    // Debug logging for token
+    console.log('🔑 API Service - Token Debug:', {
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+      fullToken: token || 'no token'
+    });
+    
     return {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -19,17 +28,36 @@ class ApiService {
   // Make authenticated GET request
   async get<T>(endpoint: string): Promise<T> {
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const fullUrl = `${this.baseUrl}${endpoint}`;
+      
+      const response = await fetch(fullUrl, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
+
+      if (response.status === 429) {
+        // Rate limited - wait a bit and retry once
+        console.warn('Rate limited, waiting 2 seconds before retry...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const retryResponse = await fetch(fullUrl, {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        });
+        
+        if (!retryResponse.ok) {
+          throw new Error(`HTTP error! status: ${retryResponse.status}`);
+        }
+        
+        return await retryResponse.json();
+      }
 
       if (response.status === 401) {
         // Token expired, try to refresh
         const newToken = await authService.refreshToken();
         if (newToken) {
           // Retry with new token
-          const retryResponse = await fetch(`${this.baseUrl}${endpoint}`, {
+          const retryResponse = await fetch(fullUrl, {
             method: 'GET',
             headers: this.getAuthHeaders(),
           });

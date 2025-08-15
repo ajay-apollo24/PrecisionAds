@@ -26,7 +26,7 @@ class AuthService {
 
   constructor() {
     // Use real API by default, fallback to mock only if explicitly needed
-    this.baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+    this.baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:7401';
     this.useMock = false; // Disable mock mode for real integration
   }
 
@@ -74,10 +74,21 @@ class AuthService {
 
       const data = await response.json();
       
+      // Debug logging for received token
+      console.log('🔑 Auth Service - Login Response:', {
+        hasToken: !!data.token,
+        tokenLength: data.token ? data.token.length : 0,
+        tokenPreview: data.token ? `${data.token.substring(0, 20)}...` : 'none',
+        user: data.user ? { id: data.user.id, email: data.user.email, role: data.user.role } : 'no user'
+      });
+      
       // Store token and user data
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('user_data', JSON.stringify(data.user));
+        console.log('✅ Token stored in localStorage');
+      } else {
+        console.log('❌ No token received in login response');
       }
 
       return {
@@ -118,7 +129,17 @@ class AuthService {
 
   // Get current token
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token');
+    
+    // Debug logging for token retrieval
+    console.log('🔑 Auth Service - Token Retrieved:', {
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+      fullToken: token || 'no token'
+    });
+    
+    return token;
   }
 
   // Get current user data
@@ -191,6 +212,31 @@ class AuthService {
     }
   }
 
+  // Debug function to check current auth state
+  debugAuthState(): void {
+    const token = this.getToken();
+    const user = this.getCurrentUser();
+    
+    console.log('🔍 Auth Debug - Current State:', {
+      token: {
+        exists: !!token,
+        length: token ? token.length : 0,
+        preview: token ? `${token.substring(0, 20)}...` : 'none',
+        full: token || 'no token'
+      },
+      user: user ? {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      } : 'no user',
+      isAuthenticated: this.isAuthenticated(),
+      localStorage: {
+        auth_token: localStorage.getItem('auth_token'),
+        user_data: localStorage.getItem('user_data')
+      }
+    });
+  }
+
   // Get user permissions
   async getUserPermissions(): Promise<string[]> {
     try {
@@ -218,4 +264,10 @@ class AuthService {
   }
 }
 
-export const authService = new AuthService(); 
+export const authService = new AuthService();
+
+// Expose debug function globally for browser console
+if (typeof window !== 'undefined') {
+  (window as any).debugAuth = () => authService.debugAuthState();
+  (window as any).authService = authService;
+} 

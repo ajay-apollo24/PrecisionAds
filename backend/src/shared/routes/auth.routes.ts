@@ -387,7 +387,7 @@ export function setupAuthRoutes(app: Express, prefix: string): void {
 // Helper function to map backend roles to frontend roles
 function mapBackendRoleToFrontend(backendRole: string): string {
   const roleMap: { [key: string]: string } = {
-    'SUPER_ADMIN': 'admin',
+    'SUPER_ADMIN': 'super_admin',
     'ADMIN': 'admin',
     'ADVERTISER': 'advertiser',
     'PUBLISHER': 'publisher',
