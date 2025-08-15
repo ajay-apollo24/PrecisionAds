@@ -31,8 +31,23 @@ export function Sidebar({ open, onOpenChange, activeTab, onTabChange }: SidebarP
   const { user } = useAuth();
 
     const getMenuItems = () => {
-    switch (user?.role) {
-      case 'super_admin':
+    // Map frontend roles to access levels
+    const getAccessLevel = (role: string) => {
+      switch (role) {
+        case 'super_admin': return 'PLATFORM';
+        case 'admin': return 'ORGANIZATION';
+        case 'manager': return 'TEAM';
+        case 'user': return 'INDIVIDUAL';
+        case 'advertiser': return 'INDIVIDUAL';
+        case 'publisher': return 'INDIVIDUAL';
+        default: return 'INDIVIDUAL';
+      }
+    };
+
+    const accessLevel = getAccessLevel(user?.role || '');
+    
+    switch (accessLevel) {
+      case 'PLATFORM': // SUPER_ADMIN
         return [
           { 
             icon: BarChart3, 
@@ -83,7 +98,8 @@ export function Sidebar({ open, onOpenChange, activeTab, onTabChange }: SidebarP
             description: 'System configuration'
           },
         ];
-      case 'admin':
+        
+      case 'ORGANIZATION': // ADMIN
         return [
           { 
             icon: BarChart3, 
@@ -128,84 +144,153 @@ export function Sidebar({ open, onOpenChange, activeTab, onTabChange }: SidebarP
             description: 'System configuration'
           },
         ];
-      case 'advertiser':
+        
+      case 'TEAM': // MANAGER
         return [
           { 
             icon: BarChart3, 
-            label: 'Dashboard', 
+            label: 'Main Dashboard', 
             tab: 'main',
-            description: 'Campaign overview and performance'
+            description: 'Overview and key metrics'
           },
           { 
-            icon: Target, 
-            label: 'Campaigns', 
-            tab: 'campaigns',
-            description: 'Manage advertising campaigns'
+            icon: PieChart, 
+            label: 'Data Metrics', 
+            tab: 'metrics',
+            description: 'Team performance and analytics'
           },
           { 
-            icon: TrendingUp, 
-            label: 'Analytics', 
-            tab: 'analytics',
-            description: 'Performance insights and reports'
-          },
-          { 
-            icon: UserCheck, 
-            label: 'Audiences', 
-            tab: 'audiences',
-            description: 'Target audience management'
+            icon: Shield, 
+            label: 'Auth Management', 
+            tab: 'auth',
+            description: 'View users and manage API keys'
           },
           { 
             icon: Activity, 
             label: 'Real-time Data', 
             tab: 'realtime',
-            description: 'Live campaign metrics'
+            description: 'Live performance and alerts'
           },
           { 
-            icon: Settings, 
-            label: 'Settings', 
-            tab: 'settings',
-            description: 'Account and campaign settings'
+            icon: Users, 
+            label: 'Users', 
+            tab: 'users',
+            description: 'View team members (read-only)'
+          },
+          { 
+            icon: Key, 
+            label: 'API Keys', 
+            tab: 'api-keys',
+            description: 'API key management for your team'
           },
         ];
-      case 'publisher':
+        
+      case 'INDIVIDUAL': // USER, ADVERTISER, PUBLISHER
+        // For advertiser and publisher, show role-specific menu items
+        if (user?.role === 'advertiser') {
+          return [
+            { 
+              icon: BarChart3, 
+              label: 'Dashboard', 
+              tab: 'main',
+              description: 'Campaign overview and performance'
+            },
+            { 
+              icon: Target, 
+              label: 'Campaigns', 
+              tab: 'campaigns',
+              description: 'Manage advertising campaigns'
+            },
+            { 
+              icon: TrendingUp, 
+              label: 'Analytics', 
+              tab: 'analytics',
+              description: 'Performance insights and reports'
+            },
+            { 
+              icon: UserCheck, 
+              label: 'Audiences', 
+              tab: 'audiences',
+              description: 'Target audience management'
+            },
+            { 
+              icon: Activity, 
+              label: 'Real-time Data', 
+              tab: 'realtime',
+              description: 'Live campaign metrics'
+            },
+            { 
+              icon: Settings, 
+              label: 'Settings', 
+              tab: 'settings',
+              description: 'Account and campaign settings'
+            },
+          ];
+        }
+        
+        if (user?.role === 'publisher') {
+          return [
+            { 
+              icon: BarChart3, 
+              label: 'Dashboard', 
+              tab: 'main',
+              description: 'Publisher overview and earnings'
+            },
+            { 
+              icon: Globe, 
+              label: 'Sites', 
+              tab: 'sites',
+              description: 'Manage publisher sites'
+            },
+            { 
+              icon: Target, 
+              label: 'Ad Units', 
+              tab: 'ad-units',
+              description: 'Ad unit configuration'
+            },
+            { 
+              icon: DollarSign, 
+              label: 'Earnings', 
+              tab: 'earnings',
+              description: 'Revenue and performance tracking'
+            },
+            { 
+              icon: Activity, 
+              label: 'Real-time Data', 
+              tab: 'realtime',
+              description: 'Live performance metrics'
+            },
+            { 
+              icon: Settings, 
+              label: 'Settings', 
+              tab: 'settings',
+              description: 'Account and site settings'
+            },
+          ];
+        }
+        
+        // Default individual user menu
         return [
           { 
             icon: BarChart3, 
-            label: 'Dashboard', 
+            label: 'Main Dashboard', 
             tab: 'main',
-            description: 'Publisher overview and earnings'
+            description: 'Your personal overview'
           },
           { 
-            icon: Globe, 
-            label: 'Sites', 
-            tab: 'sites',
-            description: 'Manage publisher sites'
+            icon: PieChart, 
+            label: 'Data Metrics', 
+            tab: 'metrics',
+            description: 'Your performance metrics'
           },
           { 
-            icon: Target, 
-            label: 'Ad Units', 
-            tab: 'ad-units',
-            description: 'Ad unit configuration'
-          },
-          { 
-            icon: DollarSign, 
-            label: 'Earnings', 
-            tab: 'earnings',
-            description: 'Revenue and performance tracking'
-          },
-          { 
-            icon: Activity, 
-            label: 'Real-time Data', 
-            tab: 'realtime',
-            description: 'Live performance metrics'
-          },
-          { 
-            icon: Settings, 
-            label: 'Settings', 
-            tab: 'settings',
-            description: 'Account and site settings'
+            icon: Shield, 
+            label: 'Auth Management', 
+            tab: 'auth',
+            description: 'View your profile and API keys'
           },
         ];
+        
       default:
         return [];
     }

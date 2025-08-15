@@ -22,10 +22,12 @@ import {
   Calendar,
   Globe,
   Mail,
-  Phone
+  Phone,
+  AlertTriangle
 } from 'lucide-react';
 import { dashboardService } from '../../services/dashboard.service';
 import { apiService } from '../../services/api.service';
+import { useAuth } from '../../App';
 
 interface Organization {
   id: string;
@@ -47,6 +49,11 @@ interface OrganizationFormData {
 }
 
 export function OrganizationManagement() {
+  const { user } = useAuth();
+  
+  // RBAC: Only SUPER_ADMIN can access this component
+  const canManageOrganizations = user?.role === 'super_admin';
+  
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [filteredOrganizations, setFilteredOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,6 +217,23 @@ export function OrganizationManagement() {
       day: 'numeric'
     });
   };
+
+  // RBAC: Prevent non-super-admin users from accessing this component
+  if (!canManageOrganizations) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-muted-foreground">
+            You don't have permission to manage organizations.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

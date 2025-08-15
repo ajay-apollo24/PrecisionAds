@@ -22,8 +22,16 @@ import {
 } from 'lucide-react';
 import { dashboardService, DashboardMetrics, Organization, User, APIKey } from '../../services/dashboard.service';
 import { toast } from '../ui/sonner';
+import { useAuth } from '../../App';
 
 export function DataMetricsDashboard() {
+  const { user } = useAuth();
+  
+  // RBAC: Determine what metrics this user can see
+  const canSeeOrganizationCount = user?.role === 'super_admin';
+  const canSeeRevenue = user?.role === 'super_admin' || user?.role === 'admin';
+  const canSeeAllData = user?.role === 'super_admin';
+  
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalOrganizations: 0,
     totalUsers: 0,
@@ -154,9 +162,14 @@ export function DataMetricsDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Data Metrics Dashboard</h1>
+          <h1 className="text-3xl font-bold">
+            {canSeeAllData ? 'Data Metrics Dashboard' : 'Organization Metrics Dashboard'}
+          </h1>
           <p className="text-muted-foreground">
-            Comprehensive platform analytics and performance metrics
+            {canSeeAllData 
+              ? 'Comprehensive platform analytics and performance metrics'
+              : 'Your organization\'s analytics and performance metrics'
+            }
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -178,26 +191,32 @@ export function DataMetricsDashboard() {
 
       {/* Key Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(metrics.totalOrganizations)}</div>
-            <p className="text-xs text-muted-foreground">
-              {organizations.filter(org => org.status === 'ACTIVE').length} active
-            </p>
-            <Progress 
-              value={(organizations.filter(org => org.status === 'ACTIVE').length / Math.max(metrics.totalOrganizations, 1)) * 100} 
-              className="mt-2" 
-            />
-          </CardContent>
-        </Card>
+        {/* Organizations Card - Only visible to SUPER_ADMIN */}
+        {canSeeOrganizationCount && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatNumber(metrics.totalOrganizations)}</div>
+              <p className="text-xs text-muted-foreground">
+                {organizations.filter(org => org.status === 'ACTIVE').length} active
+              </p>
+              <Progress 
+                value={(organizations.filter(org => org.status === 'ACTIVE').length / Math.max(metrics.totalOrganizations, 1)) * 100} 
+                className="mt-2" 
+              />
+            </CardContent>
+          </Card>
+        )}
 
+        {/* Users Card - Show filtered data based on role */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {canSeeAllData ? 'Total Users' : 'Organization Users'}
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -212,9 +231,12 @@ export function DataMetricsDashboard() {
           </CardContent>
         </Card>
 
+        {/* API Keys Card - Show filtered data based on role */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active API Keys</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {canSeeAllData ? 'Active API Keys' : 'Organization API Keys'}
+            </CardTitle>
             <Key className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -229,19 +251,24 @@ export function DataMetricsDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Platform Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics.platformRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
-              Monthly recurring revenue
-            </p>
-            <Progress value={75} className="mt-2" />
-          </CardContent>
-        </Card>
+        {/* Revenue Card - Only visible to SUPER_ADMIN and ADMIN */}
+        {canSeeRevenue && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {canSeeAllData ? 'Platform Revenue' : 'Organization Revenue'}
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(metrics.platformRevenue)}</div>
+              <p className="text-xs text-muted-foreground">
+                {canSeeAllData ? 'Monthly recurring revenue' : 'Monthly organization revenue'}
+              </p>
+              <Progress value={75} className="mt-2" />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Detailed Metrics Tabs */}
@@ -249,7 +276,9 @@ export function DataMetricsDashboard() {
         <TabsList>
           <TabsTrigger value="campaigns">Campaign Performance</TabsTrigger>
           <TabsTrigger value="publishers">Publisher Earnings</TabsTrigger>
-          <TabsTrigger value="organizations">Organizations</TabsTrigger>
+          {canSeeOrganizationCount && (
+            <TabsTrigger value="organizations">Organizations</TabsTrigger>
+          )}
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="apikeys">API Keys</TabsTrigger>
         </TabsList>

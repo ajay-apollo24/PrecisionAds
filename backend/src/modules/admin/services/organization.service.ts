@@ -345,15 +345,23 @@ export class OrganizationService {
   }
 
   /**
-   * Get organizations with performance metrics
+   * Get organizations with performance metrics (RBAC-enabled)
    */
-  static async getOrganizationsWithMetrics(): Promise<any[]> {
+  static async getOrganizationsWithMetrics(userRole: string, userOrgId?: string): Promise<any[]> {
     try {
       return await withQueryLogging(
         'get_organizations_with_metrics',
-        {},
+        { userRole, userOrgId },
         async () => {
+          // Import RBAC service
+          const { RBACService } = await import('../../../shared/services/rbac.service');
+          const dataScope = RBACService.getDataScope(userRole, userOrgId || '');
+          
+          // Build where clause based on RBAC
+          const whereClause = dataScope.canSeeAllOrganizations ? {} : { id: userOrgId };
+          
           const organizations = await prisma.organization.findMany({
+            where: whereClause,
             include: {
               _count: {
                 select: {
@@ -384,7 +392,7 @@ export class OrganizationService {
             return {
               ...org,
               metrics: {
-                totalRevenue,
+                totalRevenue: dataScope.canSeeRevenue ? totalRevenue : 0,
                 totalImpressions,
                 totalClicks,
                 ctr: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0

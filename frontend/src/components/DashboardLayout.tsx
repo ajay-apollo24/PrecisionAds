@@ -94,7 +94,7 @@ export function DashboardLayout() {
     }
   };
 
-  const dashboardTabs = getDashboardTabs();
+  //const dashboardTabs = getDashboardTabs();
 
   return (
     <div className="flex h-screen bg-background">
@@ -142,7 +142,8 @@ export function DashboardLayout() {
         </header>
 
         {/* Dashboard Navigation Tabs - Only show for main dashboard views */}
-        {dashboardTabs.length > 1 && activeTab === 'main' && (
+        
+     {/*   {dashboardTabs.length > 1 && activeTab === 'main' && (
           <div className="border-b border-border px-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-4">
@@ -155,7 +156,8 @@ export function DashboardLayout() {
               </TabsList>
             </Tabs>
           </div>
-        )}
+        )}*/}
+        
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-6">

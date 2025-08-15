@@ -70,9 +70,12 @@ export function setupOrganizationRoutes(app: Express, prefix: string): void {
   app.get(`${prefix}/organizations/metrics`,
     authenticateToken,
     requireRole(['SUPER_ADMIN', 'ADMIN']),
-    async (req: Request, res: Response) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
-        const organizations = await OrganizationService.getOrganizationsWithMetrics();
+        const organizations = await OrganizationService.getOrganizationsWithMetrics(
+          req.user!.role,
+          req.user!.organizationId
+        );
 
         res.json({
           success: true,

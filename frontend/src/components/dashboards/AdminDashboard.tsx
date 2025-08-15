@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Users, Building2, Key, TrendingUp } from 'lucide-react';
 import { dashboardService } from '../../services/dashboard.service';
+import { useAuth } from '../../App';
 
 interface DashboardMetrics {
   totalOrganizations: number;
@@ -12,6 +13,13 @@ interface DashboardMetrics {
 }
 
 export function AdminDashboard() {
+  const { user } = useAuth();
+  
+  // RBAC: Determine what metrics this user can see
+  const canSeeOrganizationCount = user?.role === 'super_admin';
+  const canSeeRevenue = user?.role === 'super_admin' || user?.role === 'admin';
+  const canSeeAllData = user?.role === 'super_admin';
+  
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalOrganizations: 0,
     totalUsers: 0,
@@ -72,44 +80,58 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold">
+          {canSeeAllData ? 'Admin Dashboard' : 'Organization Dashboard'}
+        </h1>
         <p className="text-muted-foreground">
-          Manage your advertising platform
+          {canSeeAllData 
+            ? 'Manage your advertising platform'
+            : 'Manage your organization'
+          }
         </p>
       </div>
 
       <div className="space-y-6">
           {/* Stats Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metrics.totalOrganizations}</div>
-                <p className="text-xs text-muted-foreground">
-                  Platform organizations
-                </p>
-              </CardContent>
-            </Card>
+            {/* Organizations Card - Only visible to SUPER_ADMIN */}
+            {canSeeOrganizationCount && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{metrics.totalOrganizations}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Platform organizations
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
+            {/* Users Card - Show filtered data based on role */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {canSeeAllData ? 'Total Users' : 'Organization Users'}
+                </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{metrics.totalUsers}</div>
                 <p className="text-xs text-muted-foreground">
-                  Platform users
+                  {canSeeAllData ? 'Platform users' : 'Organization users'}
                 </p>
               </CardContent>
             </Card>
 
+            {/* API Keys Card - Show filtered data based on role */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active API Keys</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {canSeeAllData ? 'Active API Keys' : 'Organization API Keys'}
+                </CardTitle>
                 <Key className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -120,27 +142,37 @@ export function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Platform Revenue</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${metrics.platformRevenue.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">
-                  Monthly recurring revenue
-                </p>
-              </CardContent>
-            </Card>
+            {/* Revenue Card - Only visible to SUPER_ADMIN and ADMIN */}
+            {canSeeRevenue && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {canSeeAllData ? 'Platform Revenue' : 'Organization Revenue'}
+                  </CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">${metrics.platformRevenue.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {canSeeAllData ? 'Monthly recurring revenue' : 'Monthly organization revenue'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
 
           {/* Recent Activity */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
+              <CardTitle>
+                {canSeeAllData ? 'Recent Activity' : 'Organization Activity'}
+              </CardTitle>
               <CardDescription>
-                Latest platform activities and updates
+                {canSeeAllData 
+                  ? 'Latest platform activities and updates'
+                  : 'Latest organization activities and updates'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent>
