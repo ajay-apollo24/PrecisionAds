@@ -1,8 +1,8 @@
 import { Express } from 'express';
-import { setupPublisherRoutes } from './modules/publisher/routes';
-import { setupAdvertiserRoutes } from './modules/advertiser/routes';
-import { setupAdServingRoutes } from './modules/ad-serving/routes';
-import { setupSharedRoutes } from './shared/routes';
+import { setupPublisherRoutes } from '../../src/modules/publisher/routes';
+import { setupAdvertiserRoutes } from '../../src/modules/advertiser/routes';
+import { setupAdServingRoutes } from '../../src/modules/ad-serving/routes';
+import { setupSharedRoutes } from '../../src/shared/routes';
 
 export function setupRoutes(app: Express): void {
   // API version prefix

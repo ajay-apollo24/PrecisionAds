@@ -19,6 +19,7 @@
     "test:api:admin": "tsx testing/run-tests.ts http://localhost:7401 3",
     "test:api:canonical": "tsx testing/run-tests.ts http://localhost:7401 4",
     "test:api:demo": "tsx testing/demo.ts",
+    "test:api:auth": "tsx testing/run-tests-with-auth.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"
   },

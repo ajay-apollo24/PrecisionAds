@@ -63,6 +63,9 @@ export const adminTestSuite: TestSuite = {
       name: 'Get All Organizations (Unauthorized)',
       method: 'GET',
       endpoint: '/api/v1/admin/organizations',
+      headers: {
+        'Authorization': 'Bearer invalid_token' // Send invalid token to get 401
+      },
       expectedStatus: 401
     },
     {
@@ -111,6 +114,9 @@ export const canonicalTestSuite: TestSuite = {
       name: 'Create Identity (Unauthorized)',
       method: 'POST',
       endpoint: '/api/v1/admin/identities',
+      headers: {
+        'Authorization': 'Bearer invalid_token' // Send invalid token to get 401
+      },
       body: {
         externalId: 'test_user_001',
         traits: {
@@ -126,8 +132,8 @@ export const canonicalTestSuite: TestSuite = {
       method: 'POST',
       endpoint: '/api/v1/admin/identities',
       headers: {
-        'x-api-key': 'REPLACE_WITH_ACTUAL_API_KEY',
-        'x-organization-id': 'REPLACE_WITH_ORG_ID'
+        'x-api-key': 'DYNAMIC_API_KEY', // Will be replaced by test data generator
+        'x-organization-id': 'DYNAMIC_ORG_ID' // Will be replaced by test data generator
       },
       body: {
         externalId: 'test_user_001',
@@ -146,11 +152,11 @@ export const canonicalTestSuite: TestSuite = {
       method: 'POST',
       endpoint: '/api/v1/admin/traits',
       headers: {
-        'x-api-key': 'REPLACE_WITH_ACTUAL_API_KEY',
-        'x-organization-id': 'REPLACE_WITH_ORG_ID'
+        'x-api-key': 'DYNAMIC_API_KEY', // Will be replaced by test data generator
+        'x-organization-id': 'DYNAMIC_ORG_ID' // Will be replaced by test data generator
       },
       body: {
-        identityId: 'REPLACE_WITH_IDENTITY_ID',
+        identityId: 'DYNAMIC_IDENTITY_ID', // Will be replaced with actual identity ID
         key: 'preferences',
         value: ['technology', 'sports'],
         type: 'ARRAY',
@@ -164,8 +170,8 @@ export const canonicalTestSuite: TestSuite = {
       method: 'POST',
       endpoint: '/api/v1/admin/cohorts',
       headers: {
-        'x-api-key': 'REPLACE_WITH_ACTUAL_API_KEY',
-        'x-organization-id': 'REPLACE_WITH_ORG_ID'
+        'x-api-key': 'DYNAMIC_API_KEY', // Will be replaced by test data generator
+        'x-organization-id': 'DYNAMIC_ORG_ID' // Will be replaced by test data generator
       },
       body: {
         name: 'Tech Enthusiasts',
@@ -185,11 +191,11 @@ export const canonicalTestSuite: TestSuite = {
       method: 'POST',
       endpoint: '/api/v1/admin/events',
       headers: {
-        'x-api-key': 'REPLACE_WITH_ACTUAL_API_KEY',
-        'x-organization-id': 'REPLACE_WITH_ORG_ID'
+        'x-api-key': 'DYNAMIC_API_KEY', // Will be replaced by test data generator
+        'x-organization-id': 'DYNAMIC_ORG_ID' // Will be replaced by test data generator
       },
       body: {
-        identityId: 'REPLACE_WITH_IDENTITY_ID',
+        identityId: 'DYNAMIC_IDENTITY_ID', // Will be replaced with actual identity ID
         type: 'PAGE_VIEW',
         name: 'Homepage Visited',
         properties: {
@@ -200,14 +206,14 @@ export const canonicalTestSuite: TestSuite = {
       },
       expectedStatus: 201,
       validateResponse: (data: any) => data.success && data.data.name === 'Homepage Visited'
-    },
+      },
     {
       name: 'Batch Operations (API Key)',
       method: 'POST',
       endpoint: '/api/v1/admin/batch',
       headers: {
-        'x-api-key': 'REPLACE_WITH_ACTUAL_API_KEY',
-        'x-organization-id': 'REPLACE_WITH_ORG_ID'
+        'x-api-key': 'DYNAMIC_API_KEY', // Will be replaced by test data generator
+        'x-organization-id': 'DYNAMIC_ORG_ID' // Will be replaced by test data generator
       },
       body: {
         operations: [
@@ -223,7 +229,7 @@ export const canonicalTestSuite: TestSuite = {
             id: 'op_2',
             type: 'trait',
             data: {
-              identityId: 'REPLACE_WITH_IDENTITY_ID',
+              identityId: 'DYNAMIC_IDENTITY_ID', // Will be replaced with actual identity ID
               key: 'batch_trait',
               value: 'batch_value',
               type: 'STRING'

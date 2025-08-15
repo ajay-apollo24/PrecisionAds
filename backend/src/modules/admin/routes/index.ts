@@ -1,7 +1,7 @@
 import { Express } from 'express';
 import { setupOrganizationRoutes } from './organizations.routes';
 import { setupUserRoutes } from './users.routes';
-import { setupCanonicalRoutes } from './canonical.routes';
+import { setupCanonicalRoutes } from './canonical-full.routes';
 import { setupAPIKeyRoutes } from './api-keys.routes';
 
 export function setupAdminRoutes(app: Express, apiPrefix: string): void {

@@ -57,7 +57,10 @@ export class APITester {
       ...additionalHeaders
     };
 
-    if (this.authToken) {
+    // Only add auth token if no explicit Authorization header is provided
+    // This allows tests to explicitly opt out of authentication
+    const hasExplicitAuth = additionalHeaders && additionalHeaders.Authorization !== undefined;
+    if (this.authToken && !hasExplicitAuth) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
@@ -225,6 +228,15 @@ export class APITester {
    */
   exportResults(filename: string = 'api-test-results.json'): void {
     const fs = require('fs');
+    const path = require('path');
+    
+    // Save to test-runs folder
+    const testRunsDir = 'test-runs';
+    if (!fs.existsSync(testRunsDir)) {
+      fs.mkdirSync(testRunsDir, { recursive: true });
+    }
+    
+    const fullPath = path.join(testRunsDir, filename);
     const data = {
       timestamp: new Date().toISOString(),
       baseURL: this.baseURL,
@@ -237,8 +249,8 @@ export class APITester {
       }
     };
     
-    fs.writeFileSync(filename, JSON.stringify(data, null, 2));
-    logger.info(`💾 Test results exported to ${filename}`);
+    fs.writeFileSync(fullPath, JSON.stringify(data, null, 2));
+    logger.info(`💾 Test results exported to ${fullPath}`);
   }
 }
 

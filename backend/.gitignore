@@ -115,6 +115,7 @@ Thumbs.db
 *.sqlite3
 
 # Test results
+test-runs/
 api-test-results-*.json
 demo-test-results.json
 

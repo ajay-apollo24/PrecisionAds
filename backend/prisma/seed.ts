@@ -18,11 +18,11 @@ async function main() {
   await prisma.identity.deleteMany();
   await prisma.adRequest.deleteMany();
   await prisma.adUnit.deleteMany();
+  await prisma.publisherEarning.deleteMany();
   await prisma.publisherSite.deleteMany();
+  await prisma.advertiserAudience.deleteMany();
   await prisma.advertiserAd.deleteMany();
   await prisma.advertiserCampaign.deleteMany();
-  await prisma.advertiserAudience.deleteMany();
-  await prisma.publisherEarning.deleteMany();
   await prisma.analyticsEvent.deleteMany();
   await prisma.audienceSegment.deleteMany();
   await prisma.userSession.deleteMany();

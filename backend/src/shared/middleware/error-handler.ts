@@ -15,14 +15,19 @@ export const errorHandler = (
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
-  // Log error
+  // Log error with enhanced context
   logger.error({
     message: err.message,
     stack: err.stack,
     url: req.url,
     method: req.method,
     ip: req.ip,
-    userAgent: req.get('User-Agent')
+    userAgent: req.get('User-Agent'),
+    module: req.url.split('/')[2] || 'unknown', // Extract module from URL
+    endpoint: req.url.split('/').slice(2).join('/') || 'unknown',
+    timestamp: new Date().toISOString(),
+    errorType: err.constructor.name,
+    statusCode: statusCode
   });
 
   // Don't leak error details in production

@@ -29,11 +29,34 @@ const customFormat = winston.format.combine(
   })
 );
 
-// Console transport with colors
+// Console transport with enhanced format
 const consoleTransport = new winston.transports.Console({
   format: winston.format.combine(
     winston.format.colorize(),
-    winston.format.simple()
+    winston.format.printf(({ timestamp, level, message, metadata, stack, module, endpoint, errorType }) => {
+      let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
+      
+      // Add module and endpoint context if available
+      if (module && module !== 'unknown') {
+        log += ` | Module: ${module}`;
+      }
+      if (endpoint && endpoint !== 'unknown') {
+        log += ` | Endpoint: ${endpoint}`;
+      }
+      if (errorType) {
+        log += ` | Type: ${errorType}`;
+      }
+      
+      if (metadata && typeof metadata === 'object' && Object.keys(metadata as object).length > 0) {
+        log += ` | Metadata: ${JSON.stringify(metadata)}`;
+      }
+      
+      if (stack) {
+        log += `\nStack: ${stack}`;
+      }
+      
+      return log;
+    })
   )
 });
 

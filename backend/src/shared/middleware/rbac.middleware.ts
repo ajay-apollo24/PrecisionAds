@@ -42,7 +42,7 @@ export const withOrganization = async (
     }
 
     // Check if organization exists
-    const organization = await prisma.organization.findUnique({
+    const organization = await (prisma as any).organization.findUnique({
       where: { id: organizationId },
       select: { id: true, status: true }
     });
@@ -99,8 +99,56 @@ export const requirePermission = (permissions: PermissionScope[]) => {
         return next();
       }
 
-      // Check if user has required permissions
-      const userPermissions = await prisma.userPermission.findMany({
+      // Check if this is an API key request (user.email will be empty for API key requests)
+      if (req.user.email === '') {
+        // For API key requests, check the API key scopes directly
+        const apiKey = req.headers['x-api-key'] as string;
+        if (apiKey) {
+          // Find all active API keys for this organization
+          const allKeys = await (prisma as any).aPIKey.findMany({
+            where: {
+              status: 'ACTIVE',
+              expiresAt: { gte: new Date() },
+              organizationId: req.organizationId
+            }
+          });
+
+          // Find the matching key by comparing hashes
+          const bcrypt = require('bcryptjs');
+          let matchingKey = null;
+          
+          for (const key of allKeys) {
+            if (await bcrypt.compare(apiKey, key.keyHash)) {
+              matchingKey = key;
+              break;
+            }
+          }
+
+          if (matchingKey && matchingKey.scopes) {
+            console.log('🔑 API Key scopes:', matchingKey.scopes);
+            console.log('🔒 Required permissions:', permissions);
+            
+            const hasAllPermissions = permissions.every(permission => 
+              matchingKey.scopes.includes(permission)
+            );
+            
+            console.log('✅ Has all permissions:', hasAllPermissions);
+            
+            if (hasAllPermissions) {
+              return next();
+            } else {
+              throw createError('Insufficient permissions', 403);
+            }
+          } else {
+            throw createError('Invalid API key', 401);
+          }
+        } else {
+          throw createError('API key required', 401);
+        }
+      }
+
+      // For user requests, check user permissions
+      const userPermissions = await (prisma as any).userPermission.findMany({
         where: {
           userId: req.user.id,
           isActive: true,
@@ -124,7 +172,7 @@ export const requirePermission = (permissions: PermissionScope[]) => {
         }
       });
 
-      const userScopes = userPermissions.map(up => up.permission.scope);
+      const userScopes = userPermissions.map((up: any) => up.permission.scope);
       const hasAllPermissions = permissions.every(permission => userScopes.includes(permission));
 
       if (!hasAllPermissions) {
@@ -232,10 +280,9 @@ export const validateAPIKey = async (
       throw createError('API key required', 401);
     }
 
-    // Find API key by hash
-    const keyRecord = await prisma.aPIKey.findFirst({
+    // Find all active API keys for comparison
+    const allKeys = await (prisma as any).aPIKey.findMany({
       where: {
-        keyHash: apiKey, // In production, you'd hash the incoming key
         status: 'ACTIVE',
         expiresAt: {
           gte: new Date()
@@ -250,6 +297,17 @@ export const validateAPIKey = async (
         }
       }
     });
+
+    // Find the matching key by comparing hashes
+    const bcrypt = require('bcryptjs');
+    let keyRecord = null;
+    
+    for (const key of allKeys) {
+      if (await bcrypt.compare(apiKey, key.keyHash)) {
+        keyRecord = key;
+        break;
+      }
+    }
 
     if (!keyRecord) {
       throw createError('Invalid or expired API key', 401);
@@ -275,7 +333,7 @@ export const validateAPIKey = async (
     };
 
     // Update last used timestamp
-    await prisma.aPIKey.update({
+    await (prisma as any).aPIKey.update({
       where: { id: keyRecord.id },
       data: { lastUsedAt: new Date() }
     });
