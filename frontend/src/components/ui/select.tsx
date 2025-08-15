@@ -32,7 +32,8 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
             if (child.type === SelectTrigger) {
               return React.cloneElement(child, {
                 onClick: handleTriggerClick,
-                isOpen
+                isOpen,
+                value
               } as any)
             }
             if (child.type === SelectContent && isOpen) {
@@ -49,8 +50,8 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
 )
 Select.displayName = "Select"
 
-const SelectTrigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { isOpen?: boolean; onClick?: () => void }>(
-  ({ className, children, isOpen, onClick, ...props }, ref) => (
+const SelectTrigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { isOpen?: boolean; onClick?: () => void; value?: string }>(
+  ({ className, children, isOpen, onClick, value, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
@@ -60,23 +61,37 @@ const SelectTrigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
       onClick={onClick}
       {...props}
     >
-      {children}
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          if (child.type === SelectValue) {
+            return React.cloneElement(child, {
+              value
+            } as any)
+          }
+        }
+        return child
+      })}
       <ChevronDown className={cn("h-4 w-4 text-gray-500 transition-transform", isOpen && "rotate-180")} />
     </div>
   )
 )
 SelectTrigger.displayName = "SelectTrigger"
 
-const SelectValue = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement> & { placeholder?: string }>(
-  ({ className, placeholder, children, ...props }, ref) => (
-    <span
-      ref={ref}
-      className={cn("text-sm text-gray-900", className)}
-      {...props}
-    >
-      {children || placeholder}
-    </span>
-  )
+const SelectValue = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement> & { placeholder?: string; value?: string }>(
+  ({ className, placeholder, value, children, ...props }, ref) => {
+    // Find the display text based on the value
+    const displayText = children || placeholder
+    
+    return (
+      <span
+        ref={ref}
+        className={cn("text-sm text-gray-900", className)}
+        {...props}
+      >
+        {displayText}
+      </span>
+    )
+  }
 )
 SelectValue.displayName = "SelectValue"
 

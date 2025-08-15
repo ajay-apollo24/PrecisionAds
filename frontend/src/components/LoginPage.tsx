@@ -1,46 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useAuth, User } from '../App';
+import { Selector, SelectorOption } from './ui/selector';
+import { useAuth } from '../App';
 import { toast } from './ui/sonner';
 import { Building2, Mail, Lock } from 'lucide-react';
-
-// Mock data for organizations and users
-const mockOrganizations = [
-  { id: '1', name: 'AdTech Solutions Inc' },
-  { id: '2', name: 'Digital Marketing Co' },
-  { id: '3', name: 'Brand Publishers LLC' },
-];
-
-const mockUsers = [
-  {
-    id: '1',
-    email: 'admin@adtech.com',
-    password: 'admin123',
-    name: 'John Admin',
-    role: 'admin' as const,
-    organizationId: '1',
-  },
-  {
-    id: '2',
-    email: 'advertiser@digital.com',
-    password: 'advertiser123',
-    name: 'Sarah Advertiser',
-    role: 'advertiser' as const,
-    organizationId: '2',
-  },
-  {
-    id: '3',
-    email: 'publisher@brand.com',
-    password: 'publisher123',
-    name: 'Mike Publisher',
-    role: 'publisher' as const,
-    organizationId: '3',
-  },
-];
+import { authService, Organization } from '../services/auth.service';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -48,55 +15,71 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [selectedOrg, setSelectedOrg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(true);
+
+  // Load organizations on component mount
+  useEffect(() => {
+    const loadOrganizations = async () => {
+      try {
+        setLoadingOrgs(true);
+        const orgs = await authService.getOrganizations();
+        setOrganizations(orgs);
+      } catch (error) {
+        console.error('Failed to load organizations:', error);
+        toast.error('Failed to load organizations');
+      } finally {
+        setLoadingOrgs(false);
+      }
+    };
+
+    loadOrganizations();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Mock authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const user = mockUsers.find(u => u.email === email && u.password === password);
-      
-      if (!user) {
-        toast.error('Invalid credentials');
-        return;
+      const response = await authService.login({
+        email,
+        password,
+        organizationId: selectedOrg
+      });
+
+      if (response.success && response.user) {
+        login(response.user);
+        toast.success('Login successful');
+      } else {
+        toast.error(response.error || 'Login failed');
       }
-
-      if (!selectedOrg) {
-        toast.error('Please select an organization');
-        return;
-      }
-
-      const organization = mockOrganizations.find(org => org.id === selectedOrg);
-      
-      const userData: User = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        organizationId: selectedOrg,
-        organizationName: organization?.name || '',
-      };
-
-      login(userData);
-      toast.success('Login successful');
     } catch (error) {
-      toast.error('Login failed');
+      console.error('Login error:', error);
+      toast.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const fillDemoCredentials = (userType: 'admin' | 'advertiser' | 'publisher') => {
-    const demoUser = mockUsers.find(u => u.role === userType);
-    if (demoUser) {
-      setEmail(demoUser.email);
-      setPassword(demoUser.password);
-      setSelectedOrg(demoUser.organizationId);
-    }
+    const demoCredentials = {
+      admin: { email: 'admin@adtech.com', password: 'admin123', orgId: '1' },
+      advertiser: { email: 'advertiser@digital.com', password: 'advertiser123', orgId: '2' },
+      publisher: { email: 'publisher@brand.com', password: 'publisher123', orgId: '3' }
+    };
+
+    const creds = demoCredentials[userType];
+    setEmail(creds.email);
+    setPassword(creds.password);
+    setSelectedOrg(creds.orgId);
   };
+
+  // Convert organizations to selector options
+  const organizationOptions: SelectorOption[] = organizations.map(org => ({
+    value: org.id,
+    label: org.name,
+    disabled: false
+  }));
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted/20">
@@ -151,22 +134,20 @@ export function LoginPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="organization">Organization</Label>
-                <Select value={selectedOrg} onValueChange={setSelectedOrg}>
-                  <SelectTrigger>
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="Select your organization" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockOrganizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Selector
+                    value={selectedOrg}
+                    onValueChange={setSelectedOrg}
+                    options={organizationOptions}
+                    placeholder={loadingOrgs ? "Loading organizations..." : "Select your organization"}
+                    disabled={loadingOrgs}
+                    className="pl-9"
+                  />
+                </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || loadingOrgs}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
@@ -181,6 +162,7 @@ export function LoginPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => fillDemoCredentials('admin')}
+                  disabled={loadingOrgs}
                 >
                   Demo Admin
                 </Button>
@@ -189,6 +171,7 @@ export function LoginPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => fillDemoCredentials('advertiser')}
+                  disabled={loadingOrgs}
                 >
                   Demo Advertiser
                 </Button>
@@ -197,6 +180,7 @@ export function LoginPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => fillDemoCredentials('publisher')}
+                  disabled={loadingOrgs}
                 >
                   Demo Publisher
                 </Button>
