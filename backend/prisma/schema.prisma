@@ -16,6 +16,7 @@ enum OrganizationType {
   ADVERTISER
   AGENCY
   NETWORK
+  ADMIN
 }
 
 enum PublisherSiteStatus {
@@ -103,6 +104,8 @@ enum UserRole {
   PUBLISHER
   ADVERTISER
   ANALYST
+  MANAGER
+  VIEWER
 }
 
 enum UserStatus {
@@ -110,6 +113,85 @@ enum UserStatus {
   INACTIVE
   SUSPENDED
   PENDING
+}
+
+enum PermissionScope {
+  // Organization management
+  ORG_READ
+  ORG_WRITE
+  ORG_DELETE
+  
+  // User management
+  USERS_READ
+  USERS_WRITE
+  USERS_DELETE
+  
+  // Data ingestion
+  INGEST_READ
+  INGEST_WRITE
+  
+  // Traits management
+  TRAITS_READ
+  TRAITS_WRITE
+  
+  // Cohorts management
+  COHORTS_READ
+  COHORTS_WRITE
+  
+  // Analytics and reporting
+  ANALYTICS_READ
+  ANALYTICS_WRITE
+  
+  // Ad management
+  ADS_READ
+  ADS_WRITE
+  ADS_DELETE
+  
+  // Campaign management
+  CAMPAIGNS_READ
+  CAMPAIGNS_WRITE
+  CAMPAIGNS_DELETE
+  
+  // Publisher management
+  PUBLISHER_READ
+  PUBLISHER_WRITE
+  
+  // Financial data
+  FINANCIAL_READ
+  FINANCIAL_WRITE
+}
+
+enum APIKeyStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum EventType {
+  IDENTITY
+  TRAIT
+  COHORT
+  PAGE_VIEW
+  CLICK
+  CONVERSION
+  CUSTOM
+}
+
+enum TraitType {
+  STRING
+  NUMBER
+  BOOLEAN
+  ARRAY
+  OBJECT
+  DATE
+}
+
+enum CohortType {
+  STATIC
+  DYNAMIC
+  BEHAVIORAL
+  PREDICTIVE
 }
 
 // Advanced Module Enums
@@ -169,6 +251,11 @@ model User {
 
   organization Organization? @relation(fields: [organizationId], references: [id])
   sessions     UserSession[]
+  apiKeys      APIKey[]
+  userPermissions UserPermission[]
+  createdEvents Event[]
+  createdTraits Trait[]
+  createdCohorts Cohort[]
 
   @@map("users")
 }
@@ -199,6 +286,12 @@ model Organization {
 
   // Relations
   users User[]
+  apiKeys APIKey[]
+  permissions Permission[]
+  events Event[]
+  traits Trait[]
+  cohorts Cohort[]
+  identities Identity[]
 
   // Publisher-specific relations
   publisherSites    PublisherSite[]
@@ -216,6 +309,148 @@ model Organization {
   audienceSegments AudienceSegment[]
 
   @@map("organizations")
+}
+
+// Enhanced RBAC and Permissions
+model Permission {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  scope          PermissionScope
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  userPermissions UserPermission[]
+
+  @@unique([organizationId, name])
+  @@map("permissions")
+}
+
+model UserPermission {
+  id           String   @id @default(cuid())
+  userId       String
+  permissionId String
+  grantedAt    DateTime @default(now())
+  grantedBy    String
+  expiresAt    DateTime?
+  isActive     Boolean  @default(true)
+
+  user       User       @relation(fields: [userId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+// API Key Management
+model APIKey {
+  id             String      @id @default(cuid())
+  name           String
+  keyHash        String      // Hashed API key
+  organizationId String
+  userId         String
+  scopes         PermissionScope[]
+  status         APIKeyStatus @default(ACTIVE)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, name])
+  @@map("api_keys")
+}
+
+// Canonical Spec Models
+model Identity {
+  id             String   @id @default(cuid())
+  organizationId String
+  externalId     String?  // External system ID
+  anonymousId    String?  // Anonymous identifier
+  userId         String?  // Internal user ID
+  identityTraits Json?    // Identity traits
+  version        Int      @default(1)
+  idempotencyKey String?  // For deduplication
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  traits       Trait[]
+  events       Event[]
+
+  @@unique([organizationId, externalId, version])
+  @@unique([organizationId, anonymousId, version])
+  @@unique([organizationId, userId, version])
+  @@map("identities")
+}
+
+model Trait {
+  id             String   @id @default(cuid())
+  organizationId String
+  identityId     String
+  key            String
+  value          Json
+  type           TraitType
+  version        Int      @default(1)
+  idempotencyKey String?  // For deduplication
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  identity     Identity    @relation(fields: [identityId], references: [id])
+  creator      User        @relation(fields: [createdBy], references: [id])
+
+  @@unique([organizationId, identityId, key, version])
+  @@map("traits")
+}
+
+model Cohort {
+  id             String     @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  type           CohortType @default(STATIC)
+  criteria       Json       // Cohort definition criteria
+  members        Json?      // Cohort member IDs
+  version        Int        @default(1)
+  idempotencyKey String?    // For deduplication
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  createdBy      String
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  creator      User        @relation(fields: [createdBy], references: [id])
+
+  @@unique([organizationId, name, version])
+  @@map("cohorts")
+}
+
+model Event {
+  id             String   @id @default(cuid())
+  organizationId String
+  identityId     String
+  type           EventType
+  name           String
+  properties     Json?    // Event properties
+  timestamp      DateTime @default(now())
+  version        Int      @default(1)
+  idempotencyKey String?  // For deduplication
+  createdAt      DateTime @default(now())
+  createdBy      String
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  identity     Identity    @relation(fields: [identityId], references: [id])
+  creator      User        @relation(fields: [createdBy], references: [id])
+
+  @@unique([organizationId, identityId, type, name, timestamp, version])
+  @@map("events")
 }
 
 model PublisherSite {

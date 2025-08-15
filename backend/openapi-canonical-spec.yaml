@@ -1,0 +1,897 @@
+openapi: 3.0.3
+info:
+  title: Precision Ads Canonical Spec v1
+  description: |
+    Canonical specification for Identity, Traits, Cohorts, and Events tracking.
+    All endpoints require organization context via x-organization-id header.
+    API keys are required for data ingestion endpoints.
+  version: 1.0.0
+  contact:
+    name: Precision Ads API Support
+    email: api@precisionads.com
+
+servers:
+  - url: https://api.precisionads.com/v1
+    description: Production server
+  - url: https://staging-api.precisionads.com/v1
+    description: Staging server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /identities:
+    post:
+      summary: Create or update identity
+      description: |
+        Create a new identity or update an existing one.
+        Supports idempotency via idempotencyKey.
+      tags:
+        - Identity
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentityRequest'
+            examples:
+              basic_identity:
+                summary: Basic identity creation
+                value:
+                  externalId: "user_123"
+                  anonymousId: "anon_456"
+                  traits:
+                    email: "user@example.com"
+                    firstName: "John"
+                    lastName: "Doe"
+                  version: 1
+                  idempotencyKey: "unique_key_123"
+      responses:
+        '201':
+          description: Identity created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityResponse'
+        '400':
+          description: Bad request - missing required fields
+        '401':
+          description: Unauthorized - invalid API key
+        '409':
+          description: Conflict - identity already exists (idempotency)
+
+  /identities/{id}:
+    get:
+      summary: Get identity by ID
+      description: Retrieve an identity with its associated traits and recent events
+      tags:
+        - Identity
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identity ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Identity retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityDetailResponse'
+        '404':
+          description: Identity not found
+
+  /identities/{id}/traits:
+    get:
+      summary: Get identity traits
+      description: Retrieve all traits for a specific identity
+      tags:
+        - Traits
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identity ID
+          schema:
+            type: string
+        - name: key
+          in: query
+          description: Filter by trait key
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Filter by trait type
+          schema:
+            type: string
+            enum: [STRING, NUMBER, BOOLEAN, ARRAY, OBJECT, DATE]
+      responses:
+        '200':
+          description: Traits retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraitsResponse'
+
+  /identities/{id}/events:
+    get:
+      summary: Get identity events
+      description: Retrieve events for a specific identity
+      tags:
+        - Events
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identity ID
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Filter by event type
+          schema:
+            type: string
+            enum: [IDENTITY, TRAIT, COHORT, PAGE_VIEW, CLICK, CONVERSION, CUSTOM]
+        - name: name
+          in: query
+          description: Filter by event name
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          description: Start date for filtering (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: End date for filtering (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Maximum number of events to return
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsResponse'
+
+  /traits:
+    post:
+      summary: Create or update trait
+      description: |
+        Create a new trait or update an existing one for an identity.
+        Supports idempotency via idempotencyKey.
+      tags:
+        - Traits
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TraitRequest'
+            examples:
+              user_trait:
+                summary: User trait example
+                value:
+                  identityId: "identity_123"
+                  key: "preferences"
+                  value: ["sports", "technology"]
+                  type: "ARRAY"
+                  version: 1
+                  idempotencyKey: "trait_key_123"
+      responses:
+        '201':
+          description: Trait created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraitResponse'
+
+  /cohorts:
+    post:
+      summary: Create cohort
+      description: |
+        Create a new cohort with defined criteria and optional members.
+        Supports idempotency via idempotencyKey.
+      tags:
+        - Cohorts
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CohortRequest'
+            examples:
+              behavioral_cohort:
+                summary: Behavioral cohort example
+                value:
+                  name: "High Value Customers"
+                  description: "Customers with purchase value > $1000"
+                  type: "BEHAVIORAL"
+                  criteria:
+                    trait: "total_purchase_value"
+                    operator: "gt"
+                    value: 1000
+                  version: 1
+                  idempotencyKey: "cohort_key_123"
+      responses:
+        '201':
+          description: Cohort created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CohortResponse'
+
+  /events:
+    post:
+      summary: Track event
+      description: |
+        Track an event for an identity.
+        Supports idempotency via idempotencyKey.
+      tags:
+        - Events
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+            examples:
+              page_view:
+                summary: Page view event
+                value:
+                  identityId: "identity_123"
+                  type: "PAGE_VIEW"
+                  name: "Product Page Viewed"
+                  properties:
+                    page: "/products/123"
+                    referrer: "https://google.com"
+                    userAgent: "Mozilla/5.0..."
+                  timestamp: "2024-01-15T10:30:00Z"
+                  version: 1
+                  idempotencyKey: "event_key_123"
+      responses:
+        '201':
+          description: Event tracked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+
+  /batch:
+    post:
+      summary: Batch operations
+      description: |
+        Perform multiple operations in a single request.
+        Supports idempotency for each operation.
+      tags:
+        - Batch Operations
+      security:
+        - ApiKeyAuth: []
+      headers:
+        x-organization-id:
+          description: Organization identifier
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchRequest'
+            examples:
+              mixed_operations:
+                summary: Mixed operations example
+                value:
+                  operations: [
+                    {
+                      id: "op_1",
+                      type: "identity",
+                      data: {
+                        externalId: "user_123",
+                        traits: { email: "user@example.com" }
+                      }
+                    },
+                    {
+                      id: "op_2",
+                      type: "trait",
+                      data: {
+                        identityId: "identity_123",
+                        key: "last_login",
+                        value: "2024-01-15T10:30:00Z",
+                        type: "DATE"
+                      }
+                    }
+                  ]
+      responses:
+        '200':
+          description: Batch operations completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for authentication
+
+  schemas:
+    IdentityRequest:
+      type: object
+      required:
+        - externalId
+      properties:
+        externalId:
+          type: string
+          description: External system identifier
+          example: "user_123"
+        anonymousId:
+          type: string
+          description: Anonymous identifier
+          example: "anon_456"
+        userId:
+          type: string
+          description: Internal user identifier
+          example: "internal_user_789"
+        traits:
+          type: object
+          description: Identity traits
+          additionalProperties: true
+          example:
+            email: "user@example.com"
+            firstName: "John"
+            lastName: "Doe"
+        version:
+          type: integer
+          description: Version number
+          default: 1
+          minimum: 1
+        idempotencyKey:
+          type: string
+          description: Unique key for idempotency
+          example: "unique_key_123"
+
+    IdentityResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Identity created successfully"
+        data:
+          $ref: '#/components/schemas/Identity'
+
+    IdentityDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/IdentityDetail'
+
+    Identity:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "identity_123"
+        organizationId:
+          type: string
+          example: "org_456"
+        externalId:
+          type: string
+          example: "user_123"
+        anonymousId:
+          type: string
+          example: "anon_456"
+        userId:
+          type: string
+          example: "internal_user_789"
+        traits:
+          type: object
+          additionalProperties: true
+        version:
+          type: integer
+          example: 1
+        idempotencyKey:
+          type: string
+          example: "unique_key_123"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IdentityDetail:
+      allOf:
+        - $ref: '#/components/schemas/Identity'
+        - type: object
+          properties:
+            traits:
+              type: array
+              items:
+                $ref: '#/components/schemas/Trait'
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/Event'
+
+    TraitRequest:
+      type: object
+      required:
+        - identityId
+        - key
+        - value
+      properties:
+        identityId:
+          type: string
+          description: Identity identifier
+          example: "identity_123"
+        key:
+          type: string
+          description: Trait key
+          example: "preferences"
+        value:
+          description: Trait value
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+            - type: object
+          example: ["sports", "technology"]
+        type:
+          type: string
+          enum: [STRING, NUMBER, BOOLEAN, ARRAY, OBJECT, DATE]
+          default: "STRING"
+          description: Trait data type
+        version:
+          type: integer
+          description: Version number
+          default: 1
+          minimum: 1
+        idempotencyKey:
+          type: string
+          description: Unique key for idempotency
+          example: "trait_key_123"
+
+    TraitResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Trait created successfully"
+        data:
+          $ref: '#/components/schemas/Trait'
+
+    Trait:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "trait_123"
+        organizationId:
+          type: string
+          example: "org_456"
+        identityId:
+          type: string
+          example: "identity_123"
+        key:
+          type: string
+          example: "preferences"
+        value:
+          description: Trait value
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+            - type: object
+        type:
+          type: string
+          enum: [STRING, NUMBER, BOOLEAN, ARRAY, OBJECT, DATE]
+        version:
+          type: integer
+          example: 1
+        idempotencyKey:
+          type: string
+          example: "trait_key_123"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TraitsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trait'
+        count:
+          type: integer
+          example: 5
+
+    CohortRequest:
+      type: object
+      required:
+        - name
+        - criteria
+      properties:
+        name:
+          type: string
+          description: Cohort name
+          example: "High Value Customers"
+        description:
+          type: string
+          description: Cohort description
+          example: "Customers with purchase value > $1000"
+        type:
+          type: string
+          enum: [STATIC, DYNAMIC, BEHAVIORAL, PREDICTIVE]
+          default: "STATIC"
+          description: Cohort type
+        criteria:
+          type: object
+          description: Cohort definition criteria
+          additionalProperties: true
+          example:
+            trait: "total_purchase_value"
+            operator: "gt"
+            value: 1000
+        members:
+          type: array
+          description: Cohort member IDs
+          items:
+            type: string
+          example: ["identity_1", "identity_2"]
+        version:
+          type: integer
+          description: Version number
+          default: 1
+          minimum: 1
+        idempotencyKey:
+          type: string
+          description: Unique key for idempotency
+          example: "cohort_key_123"
+
+    CohortResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Cohort created successfully"
+        data:
+          $ref: '#/components/schemas/Cohort'
+
+    Cohort:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cohort_123"
+        organizationId:
+          type: string
+          example: "org_456"
+        name:
+          type: string
+          example: "High Value Customers"
+        description:
+          type: string
+          example: "Customers with purchase value > $1000"
+        type:
+          type: string
+          enum: [STATIC, DYNAMIC, BEHAVIORAL, PREDICTIVE]
+        criteria:
+          type: object
+          additionalProperties: true
+        members:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+          example: 1
+        idempotencyKey:
+          type: string
+          example: "cohort_key_123"
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EventRequest:
+      type: object
+      required:
+        - identityId
+        - type
+        - name
+      properties:
+        identityId:
+          type: string
+          description: Identity identifier
+          example: "identity_123"
+        type:
+          type: string
+          enum: [IDENTITY, TRAIT, COHORT, PAGE_VIEW, CLICK, CONVERSION, CUSTOM]
+          description: Event type
+        name:
+          type: string
+          description: Event name
+          example: "Product Page Viewed"
+        properties:
+          type: object
+          description: Event properties
+          additionalProperties: true
+          example:
+            page: "/products/123"
+            referrer: "https://google.com"
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp (ISO 8601)
+          example: "2024-01-15T10:30:00Z"
+        version:
+          type: integer
+          description: Version number
+          default: 1
+          minimum: 1
+        idempotencyKey:
+          type: string
+          description: Unique key for idempotency
+          example: "event_key_123"
+
+    EventResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Event tracked successfully"
+        data:
+          $ref: '#/components/schemas/Event'
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "event_123"
+        organizationId:
+          type: string
+          example: "org_456"
+        identityId:
+          type: string
+          example: "identity_123"
+        type:
+          type: string
+          enum: [IDENTITY, TRAIT, COHORT, PAGE_VIEW, CLICK, CONVERSION, CUSTOM]
+        name:
+          type: string
+          example: "Product Page Viewed"
+        properties:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          example: 1
+        idempotencyKey:
+          type: string
+          example: "event_key_123"
+        createdAt:
+          type: string
+          format: date-time
+
+    EventsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        count:
+          type: integer
+          example: 10
+
+    BatchRequest:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          description: Array of operations to perform
+          items:
+            type: object
+            required:
+              - id
+              - type
+              - data
+            properties:
+              id:
+                type: string
+                description: Unique operation identifier
+                example: "op_1"
+              type:
+                type: string
+                enum: [identity, trait, cohort, event]
+                description: Operation type
+              data:
+                description: Operation data (varies by type)
+                additionalProperties: true
+
+    BatchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Batch operations completed"
+        results:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 5
+            successful:
+              type: integer
+              example: 4
+            failed:
+              type: integer
+              example: 1
+            operations:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  type:
+                    type: string
+                  status:
+                    type: string
+                  data:
+                    additionalProperties: true
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  type:
+                    type: string
+                  status:
+                    type: string
+                  error:
+                    type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Missing required field: identityId"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+        path:
+          type: string
+          description: Request path
+          example: "/v1/identities"
+
+tags:
+  - name: Identity
+    description: Identity management operations
+  - name: Traits
+    description: Trait management operations
+  - name: Cohorts
+    description: Cohort management operations
+  - name: Events
+    description: Event tracking operations
+  - name: Batch Operations
+    description: Batch processing operations 

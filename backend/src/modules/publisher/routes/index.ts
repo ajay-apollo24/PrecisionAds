@@ -3,6 +3,7 @@ import { setupSiteRoutes } from './sites.routes';
 import { setupAdUnitRoutes } from './ad-units.routes';
 import { setupAdRequestRoutes } from './ad-requests.routes';
 import { setupEarningsRoutes } from './earnings.routes';
+import { setupTrackingRoutes } from './tracking.routes';
 
 export function setupPublisherRoutes(app: Express, apiPrefix: string): void {
   const publisherPrefix = `${apiPrefix}/publisher`;
@@ -11,4 +12,5 @@ export function setupPublisherRoutes(app: Express, apiPrefix: string): void {
   setupAdUnitRoutes(app, publisherPrefix);
   setupAdRequestRoutes(app, publisherPrefix);
   setupEarningsRoutes(app, publisherPrefix);
+  setupTrackingRoutes(app, publisherPrefix);
 } 

@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/Users/ajaykumarbansal/Code-new/PrecisionAds/backend/logs/.8e33a30030b17f163f08f6100b69fa1fd08a9028-audit.json",
+    "files": [
+        {
+            "date": 1755222894785,
+            "name": "/Users/ajaykumarbansal/Code-new/PrecisionAds/backend/logs/audit-2025-08-15.log",
+            "hash": "d52123ce883ef684dc10b5d0e0644dda7a9e77d27a05731bfe236f30914a9ebb"
+        }
+    ],
+    "hashType": "sha256"
+}

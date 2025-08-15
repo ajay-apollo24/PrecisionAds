@@ -30,7 +30,9 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "user-agents": "^1.0.1355",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -51,7 +53,8 @@
     "prisma": "^6.14.0",
     "ts-jest": "^29.1.1",
     "tsx": "^4.6.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/winston": "^2.4.4"
   },
   "keywords": [
     "ad-server",
