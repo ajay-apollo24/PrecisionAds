@@ -5,7 +5,7 @@ import {
   requirePermission,
   requireRole 
 } from '../../../shared/middleware/rbac.middleware';
-import { authenticateToken, AuthenticatedRequest } from '../../../modules/shared/middleware/auth.middleware';
+import { authenticateToken, AuthenticatedRequest } from '../../../shared/middleware/auth.middleware';
 import { prisma } from '../../../shared/database/prisma';
 import { withQueryLogging } from '../../../shared/middleware/db-logger';
 import AuditService from '../../../shared/services/audit.service';

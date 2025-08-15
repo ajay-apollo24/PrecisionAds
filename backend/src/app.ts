@@ -5,6 +5,7 @@ import { setupAdServingRoutes } from './modules/ad-serving/routes';
 import { setupAudienceManagementRoutes } from './modules/audience-management/routes';
 import { setupAnalyticsReportingRoutes } from './modules/analytics-reporting/routes';
 import { setupAdvancedAdAlgorithmsRoutes } from './modules/advanced-ad-algorithms/routes';
+import { setupAdminRoutes } from './modules/admin/routes';
 import { setupSharedRoutes } from './shared/routes';
 
 export function setupRoutes(app: Express): void {
@@ -21,6 +22,9 @@ export function setupRoutes(app: Express): void {
   setupAnalyticsReportingRoutes(app, apiPrefix);
   setupAdvancedAdAlgorithmsRoutes(app, apiPrefix);
   
+  // Setup admin routes
+  setupAdminRoutes(app, apiPrefix);
+  
   // Setup shared routes
   setupSharedRoutes(app, apiPrefix);
 
@@ -36,6 +40,7 @@ export function setupRoutes(app: Express): void {
         audienceManagement: `${apiPrefix}/audience-management`,
         analyticsReporting: `${apiPrefix}/analytics-reporting`,
         advancedAlgorithms: `${apiPrefix}/advanced-algorithms`,
+        admin: `${apiPrefix}/admin`,
         shared: `${apiPrefix}/shared`
       },
       features: {

@@ -7,7 +7,7 @@ import {
   requireRole,
   canAccessResource 
 } from '../../../shared/middleware/rbac.middleware';
-import { authenticateToken, AuthenticatedRequest } from '../../../modules/shared/middleware/auth.middleware';
+import { authenticateToken, AuthenticatedRequest } from '../../../shared/middleware/auth.middleware';
 
 export function setupUserRoutes(app: Express, prefix: string): void {
   // Get all users (admin only)

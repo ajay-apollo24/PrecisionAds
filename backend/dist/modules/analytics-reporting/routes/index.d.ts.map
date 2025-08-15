@@ -1,1 +1,1 @@
-{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/modules/analytics-reporting/routes/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,SAAS,CAAC;AAOlC,wBAAgB,6BAA6B,CAAC,GAAG,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,GAAG,IAAI,CAQnF"}
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/modules/analytics-reporting/routes/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,SAAS,CAAC;AAGlC,wBAAgB,6BAA6B,CAAC,GAAG,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,GAAG,IAAI,CAInF"}

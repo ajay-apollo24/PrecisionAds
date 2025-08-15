@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../../../shared/database/prisma';
-import { createError } from '../../../shared/middleware/error-handler';
+import { prisma } from '../database/prisma';
+import { createError } from './error-handler';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -50,12 +50,12 @@ export async function authenticateToken(
       throw createError('User account is not active', 401);
     }
 
-          req.user = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        organizationId: user.organizationId || undefined
-      };
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      organizationId: user.organizationId || undefined
+    };
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -75,7 +75,7 @@ export function requireRole(roles: string[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
-        throw createError('Authentication required', 401);
+      throw createError('Authentication required', 401);
       }
 
       if (!roles.includes(req.user.role)) {
@@ -157,67 +157,36 @@ export function canAccessOrganization(organizationId: string) {
 export function rateLimit(maxRequests: number, windowMs: number) {
   const requests = new Map<string, { count: number; resetTime: number }>();
 
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const ip = req.ip || 'unknown';
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const now = Date.now();
 
-    const userRequests = requests.get(ip);
-    
-    if (!userRequests || now > userRequests.resetTime) {
+    // Get current request count for this IP
+    const requestData = requests.get(ip);
+
+    if (!requestData || now > requestData.resetTime) {
+      // Reset counter for new window
       requests.set(ip, { count: 1, resetTime: now + windowMs });
       return next();
     }
 
-          if (userRequests.count >= maxRequests) {
-        res.status(429).json({ 
-          error: 'Too many requests',
-          retryAfter: Math.ceil((userRequests.resetTime - now) / 1000)
-        });
-        return;
-      }
+    if (requestData.count >= maxRequests) {
+      return res.status(429).json({
+        error: 'Too many requests',
+        message: `Rate limit exceeded. Maximum ${maxRequests} requests per ${windowMs / 1000} seconds.`
+      });
+    }
 
-    userRequests.count++;
+    // Increment counter
+    requestData.count++;
     next();
   };
 }
 
-/**
- * Middleware to validate request body
- */
-export function validateBody(schema: Record<string, { required?: boolean; type?: string; minLength?: number; maxLength?: number }>) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    try {
-      // Simple validation - in production, use a proper validation library like Joi or Zod
-      if (!req.body || Object.keys(req.body).length === 0) {
-        throw createError('Request body is required', 400);
-      }
-
-      // Basic schema validation
-      for (const [key, rules] of Object.entries(schema)) {
-        if (rules.required && !req.body[key]) {
-          throw createError(`${key} is required`, 400);
-        }
-
-        if (req.body[key] && rules.type && typeof req.body[key] !== rules.type) {
-          throw createError(`${key} must be of type ${rules.type}`, 400);
-        }
-
-        if (req.body[key] && rules.minLength && typeof req.body[key] === 'string' && req.body[key].length < rules.minLength) {
-          throw createError(`${key} must be at least ${rules.minLength} characters`, 400);
-        }
-
-        if (req.body[key] && rules.maxLength && typeof req.body[key] === 'string' && req.body[key].length > rules.maxLength) {
-          throw createError(`${key} must be at most ${rules.maxLength} characters`, 400);
-        }
-      }
-
-      next();
-    } catch (error) {
-      if (error && typeof error === 'object' && 'statusCode' in error) {
-        res.status((error as any).statusCode).json({ error: (error as any).message });
-      } else {
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    }
-  };
-} 
+export default {
+  authenticateToken,
+  requireRole,
+  requireOrganizationAccess,
+  canAccessOrganization,
+  rateLimit
+}; 
