@@ -3,15 +3,20 @@ import { useAuth } from '../App';
 import { AdminDashboard } from './dashboards/AdminDashboard';
 import { AdvertiserDashboard } from './dashboards/AdvertiserDashboard';
 import { PublisherDashboard } from './dashboards/PublisherDashboard';
+import { DataMetricsDashboard } from './dashboards/DataMetricsDashboard';
+import { AuthManagementDashboard } from './dashboards/AuthManagementDashboard';
+import { RealTimeDashboard } from './dashboards/RealTimeDashboard';
 import { Sidebar } from './ui/sidebar';
 import { Button } from './ui/button';
-import { LogOut, User } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { LogOut, User, Settings, BarChart3, Shield, Activity } from 'lucide-react';
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('main');
 
-  const renderDashboard = () => {
+  const renderMainDashboard = () => {
     switch (user?.role) {
       case 'admin':
         return <AdminDashboard />;
@@ -24,9 +29,75 @@ export function DashboardLayout() {
     }
   };
 
+  const getDashboardTabs = () => {
+    switch (user?.role) {
+      case 'admin':
+        return [
+          { value: 'main', label: 'Main Dashboard', icon: BarChart3 },
+          { value: 'metrics', label: 'Data Metrics', icon: BarChart3 },
+          { value: 'auth', label: 'Auth Management', icon: Shield },
+          { value: 'realtime', label: 'Real-time Data', icon: Activity }
+        ];
+      case 'advertiser':
+        return [
+          { value: 'main', label: 'Campaign Dashboard', icon: BarChart3 },
+          { value: 'realtime', label: 'Real-time Data', icon: Activity }
+        ];
+      case 'publisher':
+        return [
+          { value: 'main', label: 'Publisher Dashboard', icon: BarChart3 },
+          { value: 'realtime', label: 'Real-time Data', icon: Activity }
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'main':
+        return renderMainDashboard();
+      case 'metrics':
+        return <DataMetricsDashboard />;
+      case 'auth':
+        return <AuthManagementDashboard />;
+      case 'realtime':
+        return <RealTimeDashboard />;
+      case 'organizations':
+        return <OrganizationsScreen />;
+      case 'users':
+        return <UsersScreen />;
+      case 'api-keys':
+        return <APIKeysScreen />;
+      case 'campaigns':
+        return <CampaignsScreen />;
+      case 'analytics':
+        return <AnalyticsScreen />;
+      case 'audiences':
+        return <AudiencesScreen />;
+      case 'sites':
+        return <SitesScreen />;
+      case 'ad-units':
+        return <AdUnitsScreen />;
+      case 'earnings':
+        return <EarningsScreen />;
+      case 'settings':
+        return <SettingsScreen />;
+      default:
+        return renderMainDashboard();
+    }
+  };
+
+  const dashboardTabs = getDashboardTabs();
+
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+      <Sidebar 
+        open={sidebarOpen} 
+        onOpenChange={setSidebarOpen} 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
@@ -64,10 +135,177 @@ export function DashboardLayout() {
           </div>
         </header>
 
+        {/* Dashboard Navigation Tabs - Only show for main dashboard views */}
+        {dashboardTabs.length > 1 && activeTab === 'main' && (
+          <div className="border-b border-border px-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-4">
+                {dashboardTabs.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value} className="flex items-center gap-2">
+                    <tab.icon className="h-4 w-4" />
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
+
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-6">
-          {renderDashboard()}
+          {renderTabContent()}
         </main>
+      </div>
+    </div>
+  );
+}
+
+// Placeholder screen components for additional navigation items
+function OrganizationsScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Organizations</h1>
+        <p className="text-muted-foreground">Manage organization settings and configurations</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Organizations Management</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function UsersScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Users</h1>
+        <p className="text-muted-foreground">Manage user accounts and permissions</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">User Management</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function APIKeysScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">API Keys</h1>
+        <p className="text-muted-foreground">Manage API keys and access tokens</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">API Key Management</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function CampaignsScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Campaigns</h1>
+        <p className="text-muted-foreground">Manage advertising campaigns and performance</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Campaign Management</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Analytics</h1>
+        <p className="text-muted-foreground">View campaign performance and insights</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Dashboard</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function AudiencesScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Audiences</h1>
+        <p className="text-muted-foreground">Manage target audiences and segments</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Audience Management</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function SitesScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Sites</h1>
+        <p className="text-muted-foreground">Manage publisher sites and domains</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Site Management</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function AdUnitsScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Ad Units</h1>
+        <p className="text-muted-foreground">Configure and manage ad units</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Ad Unit Management</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function EarningsScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Earnings</h1>
+        <p className="text-muted-foreground">Track revenue and performance metrics</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Earnings Dashboard</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
+      </div>
+    </div>
+  );
+}
+
+function SettingsScreen() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-muted-foreground">Configure account and system settings</p>
+      </div>
+      <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Settings Panel</h3>
+        <p className="text-gray-500">This screen will be implemented with backend integration</p>
       </div>
     </div>
   );

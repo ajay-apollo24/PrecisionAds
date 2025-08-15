@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
+import { ChevronDown } from "lucide-react"
 
 export interface SelectProps {
   value?: string
@@ -9,30 +10,58 @@ export interface SelectProps {
 
 const Select = React.forwardRef<HTMLDivElement, SelectProps>(
   ({ value, onValueChange, children, ...props }, ref) => {
+    const [isOpen, setIsOpen] = React.useState(false)
+    
+    const handleTriggerClick = () => {
+      setIsOpen(!isOpen)
+    }
+    
+    const handleItemClick = (itemValue: string) => {
+      onValueChange?.(itemValue)
+      setIsOpen(false)
+    }
+    
     return (
       <div
         ref={ref}
         className="relative"
         {...props}
       >
-        {children}
+        {React.Children.map(children, (child) => {
+          if (React.isValidElement(child)) {
+            if (child.type === SelectTrigger) {
+              return React.cloneElement(child, {
+                onClick: handleTriggerClick,
+                isOpen
+              } as any)
+            }
+            if (child.type === SelectContent && isOpen) {
+              return React.cloneElement(child, {
+                onItemClick: handleItemClick
+              } as any)
+            }
+          }
+          return child
+        })}
       </div>
     )
   }
 )
 Select.displayName = "Select"
 
-const SelectTrigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, children, ...props }, ref) => (
+const SelectTrigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { isOpen?: boolean; onClick?: () => void }>(
+  ({ className, children, isOpen, onClick, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm cursor-pointer hover:bg-gray-50",
         className
       )}
+      onClick={onClick}
       {...props}
     >
       {children}
+      <ChevronDown className={cn("h-4 w-4 text-gray-500 transition-transform", isOpen && "rotate-180")} />
     </div>
   )
 )
@@ -42,7 +71,7 @@ const SelectValue = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLS
   ({ className, placeholder, children, ...props }, ref) => (
     <span
       ref={ref}
-      className={cn("text-sm", className)}
+      className={cn("text-sm text-gray-900", className)}
       {...props}
     >
       {children || placeholder}
@@ -51,31 +80,44 @@ const SelectValue = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLS
 )
 SelectValue.displayName = "SelectValue"
 
-const SelectContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, children, ...props }, ref) => (
+const SelectContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { onItemClick?: (value: string) => void }>(
+  ({ className, children, onItemClick, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "absolute top-full z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto",
+        "absolute top-full z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto",
         className
       )}
+      style={{ 
+        zIndex: 9999,
+        backgroundColor: 'white',
+        border: '1px solid #d1d5db',
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+      }}
       {...props}
     >
-      {children}
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, {
+            onItemClick
+          } as any)
+        }
+        return child
+      })}
     </div>
   )
 )
 SelectContent.displayName = "SelectContent"
 
-const SelectItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { value: string }>(
-  ({ className, value, children, ...props }, ref) => (
+const SelectItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { value: string; onItemClick?: (value: string) => void }>(
+  ({ className, value, children, onItemClick, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "px-3 py-2 text-sm hover:bg-accent cursor-pointer",
+        "px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 cursor-pointer",
         className
       )}
-      data-value={value}
+      onClick={() => onItemClick?.(value)}
       {...props}
     >
       {children}
