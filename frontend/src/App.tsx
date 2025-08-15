@@ -1,40 +1,54 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Box } from '@mui/material';
+import React, { useState, createContext, useContext } from 'react';
+import { LoginPage } from './components/LoginPage';
+import { DashboardLayout } from './components/DashboardLayout';
+import { Toaster } from './components/ui/sonner';
 
-import { useAuth } from './contexts/AuthContext';
-import Layout from './components/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import PublisherDashboard from './pages/PublisherDashboard';
-import AdvertiserDashboard from './pages/AdvertiserDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-
-function App() {
-  const { user, isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
-
-  return (
-    <Box sx={{ display: 'flex' }}>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/publisher" element={<PublisherDashboard />} />
-          <Route path="/advertiser" element={<AdvertiserDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
-    </Box>
-  );
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'advertiser' | 'publisher';
+  organizationId: string;
+  organizationName: string;
 }
 
-export default App; 
+interface AuthContextType {
+  user: User | null;
+  login: (user: User) => void;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+
+  const login = (userData: User) => {
+    setUser(userData);
+  };
+
+  const logout = () => {
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      <div className="min-h-screen bg-background">
+        {user ? (
+          <DashboardLayout />
+        ) : (
+          <LoginPage />
+        )}
+        <Toaster />
+      </div>
+    </AuthContext.Provider>
+  );
+} 

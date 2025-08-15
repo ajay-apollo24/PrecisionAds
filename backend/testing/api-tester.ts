@@ -80,7 +80,8 @@ export class APITester {
         url,
         headers: this.getHeaders(testCase.headers),
         data: testCase.body,
-        timeout: 10000 // 10 second timeout
+        timeout: 10000, // 10 second timeout
+        validateStatus: (status) => true // Don't throw errors for any status codes
       });
 
       const responseTime = Date.now() - startTime;

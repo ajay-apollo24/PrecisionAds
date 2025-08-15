@@ -292,7 +292,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         });
 
-        res.status(200).json({
+        res.status(201).json({
           success: true,
           message: 'Event tracked successfully',
           data: event
