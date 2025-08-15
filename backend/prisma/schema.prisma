@@ -153,19 +153,19 @@ enum ModelStatus {
 
 // Models
 model User {
-  id              String     @id @default(cuid())
-  email           String     @unique
-  password        String
-  firstName       String
-  lastName        String
-  role            UserRole
-  status          UserStatus @default(PENDING)
-  organizationId  String?
-  lastLoginAt     DateTime?
-  emailVerified   Boolean    @default(false)
+  id             String     @id @default(cuid())
+  email          String     @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           UserRole
+  status         UserStatus @default(PENDING)
+  organizationId String?
+  lastLoginAt    DateTime?
+  emailVerified  Boolean    @default(false)
   emailVerifiedAt DateTime?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   organization Organization? @relation(fields: [organizationId], references: [id])
   sessions     UserSession[]
@@ -213,7 +213,7 @@ model Organization {
 
   // Shared relations
   analyticsEvents AnalyticsEvent[]
-  AudienceSegment AudienceSegment[]
+  audienceSegments AudienceSegment[]
 
   @@map("organizations")
 }
@@ -227,12 +227,12 @@ model PublisherSite {
   settings       Json? // Site-specific settings
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
-
+  
   organization Organization       @relation(fields: [organizationId], references: [id])
   adUnits      AdUnit[]
   adRequests   AdRequest[]
   earnings     PublisherEarning[]
-
+  
   @@unique([organizationId, domain])
   @@map("publisher_sites")
 }
@@ -248,11 +248,11 @@ model AdUnit {
   settings       Json? // Targeting, frequency caps
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
+  
   organization Organization  @relation(fields: [organizationId], references: [id])
   site         PublisherSite @relation(fields: [siteId], references: [id])
   adRequests   AdRequest[]
-
+  
   @@unique([organizationId, siteId, name])
   @@map("ad_units")
 }
@@ -276,11 +276,11 @@ model AdRequest {
   impression     Boolean         @default(false)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
-
+  
   organization Organization  @relation(fields: [organizationId], references: [id])
   site         PublisherSite @relation(fields: [siteId], references: [id])
   adUnit       AdUnit        @relation(fields: [adUnitId], references: [id])
-
+  
   @@map("ad_requests")
 }
 
@@ -296,10 +296,10 @@ model PublisherEarning {
   cpc            Decimal  @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-
+  
   organization Organization  @relation(fields: [organizationId], references: [id])
   site         PublisherSite @relation(fields: [siteId], references: [id])
-
+  
   @@unique([organizationId, siteId, date])
   @@map("publisher_earnings")
 }
@@ -325,11 +325,11 @@ model AdvertiserCampaign {
   conversions    Int            @default(0)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
-
+  
   organization Organization         @relation(fields: [organizationId], references: [id])
   ads          AdvertiserAd[]
   audiences    AdvertiserAudience[]
-
+  
   @@map("advertiser_campaigns")
 }
 
@@ -352,10 +352,10 @@ model AdvertiserAd {
   cpm            Decimal      @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
+  
   organization Organization       @relation(fields: [organizationId], references: [id])
   campaign     AdvertiserCampaign @relation(fields: [campaignId], references: [id])
-
+  
   @@map("advertiser_ads")
 }
 
@@ -369,24 +369,24 @@ model AdvertiserAudience {
   size           Int? // Estimated audience size
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-
+  
   organization Organization       @relation(fields: [organizationId], references: [id])
   campaign     AdvertiserCampaign @relation(fields: [campaignId], references: [id])
-
+  
   @@map("advertiser_audiences")
 }
 
 model AnalyticsEvent {
   id             String   @id @default(cuid())
   organizationId String
-  eventType      String // impression, click, conversion
+  eventType      String   // impression, click, conversion
   eventData      Json
   timestamp      DateTime @default(now())
   userId         String? // Anonymous user ID
   sessionId      String?
-
+  
   organization Organization @relation(fields: [organizationId], references: [id])
-
+  
   @@map("analytics_events")
 }
 
@@ -402,7 +402,7 @@ model AdBid {
   qualityScore   Decimal?
   won            Boolean  @default(false)
   createdAt      DateTime @default(now())
-
+  
   @@map("ad_bids")
 }
 
@@ -417,7 +417,7 @@ model FrequencyCap {
   windowStart    DateTime
   windowEnd      DateTime
   createdAt      DateTime @default(now())
-
+  
   @@map("frequency_caps")
 }
 
@@ -502,7 +502,7 @@ model AudienceRealtimeData {
   organizationId  String
   userId          String
   isActive        Boolean  @default(true)
-  isEngaged       Boolean  @default(false)
+  isEngaged      Boolean  @default(false)
   sessionDuration Int
   lastActivity    DateTime
   createdAt       DateTime @default(now())
