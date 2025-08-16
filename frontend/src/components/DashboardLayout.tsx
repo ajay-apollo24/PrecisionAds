@@ -19,8 +19,21 @@ export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('main');
 
+  // Debug logging for user role
+  console.log('🔍 DashboardLayout - User Role Debug:', {
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      organizationId: user.organizationId
+    } : 'no user',
+    role: user?.role,
+    roleType: typeof user?.role
+  });
+
   const renderMainDashboard = () => {
     switch (user?.role) {
+      case 'super_admin':
       case 'admin':
         return <AdminDashboard />;
       case 'advertiser':
@@ -28,12 +41,13 @@ export function DashboardLayout() {
       case 'publisher':
         return <PublisherDashboard />;
       default:
-        return <div>Unknown role</div>;
+        return <div>Unknown role: {user?.role || 'undefined'}</div>;
     }
   };
 
   const getDashboardTabs = () => {
     switch (user?.role) {
+      case 'super_admin':
       case 'admin':
         return [
           { value: 'main', label: 'Main Dashboard', icon: BarChart3 },

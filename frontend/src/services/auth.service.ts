@@ -155,6 +155,37 @@ class AuthService {
     return null;
   }
 
+  // Get fresh user data from server
+  async getFreshUserData(): Promise<User | null> {
+    try {
+      const token = this.getToken();
+      if (!token) return null;
+
+      const response = await fetch(`${this.baseUrl}/api/v1/auth/validate`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user) {
+          // Update stored user data
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+          console.log('✅ Auth Service - Fresh user data retrieved:', data.user);
+          return data.user;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to get fresh user data:', error);
+      return null;
+    }
+  }
+
   // Check if user is authenticated
   isAuthenticated(): boolean {
     const token = this.getToken();
@@ -176,7 +207,17 @@ class AuthService {
         },
       });
 
-      return response.ok;
+      if (response.ok) {
+        const data = await response.json();
+        // Update stored user data with fresh data from server
+        if (data.user) {
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+          console.log('✅ Auth Service - User data updated from validate:', data.user);
+        }
+        return true;
+      }
+
+      return false;
     } catch (error) {
       console.error('Token validation failed:', error);
       return false;
