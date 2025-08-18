@@ -1,6 +1,8 @@
 import { Express, Request, Response } from 'express';
-import { prisma } from '../../../shared/database/prisma';
+import { AudienceService } from '../services/audience.service';
 import { createError } from '../../../shared/middleware/error-handler';
+
+const audienceService = new AudienceService();
 
 export function setupAudienceSegmentsRoutes(app: Express, prefix: string): void {
   // Get all audience segments for an organization
@@ -13,42 +15,18 @@ export function setupAudienceSegmentsRoutes(app: Express, prefix: string): void 
         throw createError('Organization ID required', 400);
       }
 
-      const where: any = { organizationId };
+      const filters = {
+        organizationId,
+        type: type as string,
+        status: status as string,
+        page: Number(page),
+        limit: Number(limit)
+      };
 
-      if (type) {
-        where.type = type;
-      }
+      const result = await audienceService.getAudienceSegments(filters);
 
-      if (status) {
-        where.status = status;
-      }
-
-      const skip = (Number(page) - 1) * Number(limit);
-
-      const [segments, total] = await Promise.all([
-        prisma.audienceSegment.findMany({
-          where,
-          include: {
-            targetingRules: true,
-            performanceMetrics: true
-          },
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: Number(limit)
-        }),
-        prisma.audienceSegment.count({ where })
-      ]);
-
-      res.json({
-        segments,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total,
-          pages: Math.ceil(total / Number(limit))
-        }
-      });
-    } catch (error) {
+      res.json(result);
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -79,25 +57,21 @@ export function setupAudienceSegmentsRoutes(app: Express, prefix: string): void 
         throw createError('Name and type are required', 400);
       }
 
-      const segment = await prisma.audienceSegment.create({
-        data: {
-          organizationId,
-          name,
-          description,
-          type,
-          targetingRules: targetingRules || {},
-          estimatedSize,
-          status,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      });
+      const segment = await audienceService.createAudienceSegment(
+        organizationId,
+        name,
+        description,
+        type,
+        targetingRules,
+        estimatedSize,
+        status
+      );
 
       res.status(201).json({
         message: 'Audience segment created successfully',
         segment
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -117,30 +91,17 @@ export function setupAudienceSegmentsRoutes(app: Express, prefix: string): void 
         throw createError('Organization ID required', 400);
       }
 
-      const segment = await prisma.audienceSegment.findFirst({
-        where: { 
-          id,
-          organizationId 
-        }
-      });
-
-      if (!segment) {
-        throw createError('Audience segment not found', 404);
-      }
-
-      const updatedSegment = await prisma.audienceSegment.update({
-        where: { id },
-        data: {
-          ...updateData,
-          updatedAt: new Date()
-        }
-      });
+      const updatedSegment = await audienceService.updateAudienceSegment(
+        id,
+        organizationId,
+        updateData
+      );
 
       res.json({
         message: 'Audience segment updated successfully',
         segment: updatedSegment
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -160,38 +121,15 @@ export function setupAudienceSegmentsRoutes(app: Express, prefix: string): void 
         throw createError('Organization ID required', 400);
       }
 
-      const where: any = { 
-        segmentId: id,
-        organizationId 
-      };
+      const result = await audienceService.getSegmentPerformance(
+        id,
+        organizationId,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
 
-      if (startDate && endDate) {
-        where.date = {
-          gte: new Date(startDate as string),
-          lte: new Date(endDate as string)
-        };
-      }
-
-      const metrics = await prisma.audienceSegmentPerformance.findMany({
-        where,
-        orderBy: { date: 'desc' }
-      });
-
-      // Calculate aggregated metrics
-      const aggregated = metrics.reduce((acc, metric) => ({
-        totalImpressions: acc.totalImpressions + metric.impressions,
-        totalClicks: acc.totalClicks + metric.clicks,
-        totalConversions: acc.totalConversions + metric.conversions,
-        totalRevenue: acc.totalRevenue + Number(metric.revenue)
-      }), { totalImpressions: 0, totalClicks: 0, totalConversions: 0, totalRevenue: 0 });
-
-      res.json({
-        metrics,
-        aggregated,
-        ctr: aggregated.totalImpressions > 0 ? (aggregated.totalClicks / aggregated.totalImpressions) * 100 : 0,
-        conversionRate: aggregated.totalClicks > 0 ? (aggregated.totalConversions / aggregated.totalClicks) * 100 : 0
-      });
-    } catch (error) {
+      res.json(result);
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
