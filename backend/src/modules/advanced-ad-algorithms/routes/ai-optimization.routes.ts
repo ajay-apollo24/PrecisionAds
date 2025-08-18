@@ -323,6 +323,76 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
       }
     }
   });
+
+  // Execute AI optimization campaign
+  app.post(`${prefix}/ai-optimization/campaigns/:campaignId/execute`, async (req: Request, res: Response) => {
+    try {
+      const { campaignId } = req.params;
+      const { optimizationType, parameters } = req.body;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      if (!optimizationType) {
+        throw createError('Optimization type is required', 400);
+      }
+
+      // Execute AI optimization using the service
+      const result = await aiOptimizationService.startOptimization(
+        campaignId,
+        organizationId,
+        optimizationType,
+        parameters || {}
+      );
+
+      res.json({
+        message: 'AI optimization started successfully',
+        ...result
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Get AI optimization status
+  app.get(`${prefix}/ai-optimization/campaigns/:campaignId/status`, async (req: Request, res: Response) => {
+    try {
+      const { campaignId } = req.params;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      // Get optimization status using the service
+      const campaign = await prisma.aIOptimizationCampaign.findFirst({
+        where: { id: campaignId, organizationId }
+      });
+
+      if (!campaign) {
+        throw createError('AI optimization campaign not found', 404);
+      }
+
+      res.json({
+        message: 'AI optimization status retrieved successfully',
+        campaign,
+        status: campaign.status,
+        lastUpdated: campaign.updatedAt
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
 }
 
 import { AIOptimizationService } from '../services/ai-optimization.service';

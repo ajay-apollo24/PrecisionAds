@@ -1,6 +1,7 @@
 # 🔐 Authentication Setup Guide - Week 1
 
 ## 🎯 **Overview**
+
 This guide will help you set up and test the authentication system for PrecisionAds. We've fixed the JWT token validation, completed auth routes, and removed hardcoded data from the frontend.
 
 ---
@@ -8,6 +9,7 @@ This guide will help you set up and test the authentication system for Precision
 ## ✅ **What We've Fixed**
 
 ### **1. Backend Authentication Issues**
+
 - ✅ **JWT Token Structure**: Fixed mismatch between token creation and validation
 - ✅ **Role Mapping**: Added proper mapping from backend roles to frontend roles
 - ✅ **Auth Routes**: Completed login, logout, token validation, and refresh endpoints
@@ -15,6 +17,7 @@ This guide will help you set up and test the authentication system for Precision
 - ✅ **CORS Configuration**: Fixed CORS policy to allow frontend requests
 
 ### **2. Frontend Authentication**
+
 - ✅ **Removed Hardcoded Data**: No more mock users or organizations
 - ✅ **Real API Integration**: Frontend now calls real backend endpoints
 - ✅ **Error Handling**: Proper error messages and validation
@@ -27,16 +30,19 @@ This guide will help you set up and test the authentication system for Precision
 ### **Step 1: Backend Environment Setup**
 
 1. **Navigate to backend directory**:
+
    ```bash
    cd backend
    ```
 
 2. **Copy environment file**:
+3. 
    ```bash
    cp env.example .env
    ```
 
-3. **Edit `.env` file** with your database credentials:
+4. **Edit `.env` file** with your database credentials:
+   
    ```env
    DATABASE_URL="postgresql://username:password@localhost:5432/precisionads"
    JWT_SECRET="your-super-secret-jwt-key-here-change-in-production"
@@ -46,7 +52,8 @@ This guide will help you set up and test the authentication system for Precision
    CORS_ORIGIN="http://localhost:7400"
    ```
 
-4. **Install dependencies**:
+5. **Install dependencies**:
+
    ```bash
    npm install
    ```
@@ -54,6 +61,7 @@ This guide will help you set up and test the authentication system for Precision
 ### **Step 2: Database Setup**
 
 1. **Set up PostgreSQL database**:
+
    ```bash
    # Create database
    createdb precisionads
@@ -64,6 +72,7 @@ This guide will help you set up and test the authentication system for Precision
    ```
 
 2. **Run database migrations**:
+
    ```bash
    npx prisma migrate dev
    ```
@@ -123,12 +132,14 @@ After running the seed script, you'll have these test accounts:
 - **Organization**: TechCorp Media
 
 ### **Advertiser User**
+
 - **Email**: `advertiser@fashionforward.com`
 - **Password**: `user123`
 - **Role**: Advertiser
 - **Organization**: Fashion Forward Brands
 
 ### **Agency User**
+
 - **Email**: `manager@digitalagency.com`
 - **Password**: `user123`
 - **Role**: Manager
@@ -139,6 +150,7 @@ After running the seed script, you'll have these test accounts:
 ## 🚀 **Starting the Application**
 
 ### **1. Start Backend Server**
+
 ```bash
 cd backend
 npm run dev
@@ -147,6 +159,7 @@ npm start
 ```
 
 **Expected Output**:
+
 ```
 🚀 Precision Ads Server running on port 7401
 ✅ Database connected
@@ -155,12 +168,14 @@ npm start
 ```
 
 ### **2. Start Frontend Development Server**
+
 ```bash
 cd frontend
 npm run dev
 ```
 
 **Expected Output**:
+
 ```
   VITE v4.5.14  ready in 500 ms
 
@@ -173,22 +188,26 @@ npm run dev
 ## 🧪 **Testing the Authentication**
 
 ### **1. Test Organization Loading**
+
 - Open `http://localhost:7400`
 - Check browser console for any errors
 - Verify organizations load from backend
 - Should see 4 organizations in the dropdown
 
 ### **2. Test Login Flow**
+
 - Try logging in with test credentials
 - Verify successful login and redirect to dashboard
 - Check browser localStorage for token storage
 
 ### **3. Test Token Validation**
+
 - After login, check browser console
 - Verify token validation calls to backend
 - Check that user stays logged in on page refresh
 
 ### **4. Test Logout Flow**
+
 - Click logout button
 - Verify token removal from localStorage
 - Verify redirect to login page
@@ -247,6 +266,7 @@ npm run dev
 - `GET /api/v1/auth/organizations` - Get organizations for login
 
 ### **Test with curl**
+
 ```bash
 # Test organizations endpoint
 curl http://localhost:7401/api/v1/auth/organizations
@@ -262,6 +282,7 @@ curl -X POST http://localhost:7401/api/v1/auth/login \
 ## 🎯 **Success Criteria**
 
 ### **✅ Authentication Working**
+
 - [ ] Organizations load from backend
 - [ ] Login with test credentials succeeds
 - [ ] JWT token is stored in localStorage
@@ -271,6 +292,7 @@ curl -X POST http://localhost:7401/api/v1/auth/login \
 - [ ] No CORS errors
 
 ### **✅ Backend Integration**
+
 - [ ] All auth endpoints respond correctly
 - [ ] JWT tokens are properly validated
 - [ ] Role-based access control works
@@ -279,6 +301,7 @@ curl -X POST http://localhost:7401/api/v1/auth/login \
 - [ ] CORS properly configured
 
 ### **✅ Error Handling**
+
 - [ ] Invalid credentials show proper error
 - [ ] Network errors are handled gracefully
 - [ ] Missing organization selection shows error

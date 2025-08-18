@@ -245,4 +245,67 @@ export function setupRTBRoutes(app: Express, prefix: string): void {
       }
     }
   });
+
+  // Execute RTB deal for a specific campaign
+  app.post(`${prefix}/rtb/campaigns/:campaignId/execute`, async (req: Request, res: Response) => {
+    try {
+      const { campaignId } = req.params;
+      const { adRequest, exchangeId } = req.body;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      if (!adRequest) {
+        throw createError('Ad request data is required', 400);
+      }
+
+      // Execute RTB deal using the RTB service
+      const result = await rtbService.processBidRequest(
+        adRequest,
+        exchangeId || 'default'
+      );
+
+      res.json({
+        message: 'RTB deal execution completed',
+        bidResponse: result,
+        executed: !!result
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Get RTB campaign performance using service
+  app.get(`${prefix}/rtb/campaigns/:campaignId/performance/service`, async (req: Request, res: Response) => {
+    try {
+      const { campaignId } = req.params;
+      const { startDate, endDate } = req.query;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      // Get performance using the RTB service
+      const performance = await rtbService.getCampaignPerformance(campaignId);
+
+      res.json({
+        message: 'RTB campaign performance retrieved successfully',
+        performance,
+        campaignId
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
 } 

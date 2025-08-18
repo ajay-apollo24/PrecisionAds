@@ -1,6 +1,9 @@
 import { Express, Request, Response } from 'express';
 import { prisma } from '../../../shared/database/prisma';
 import { createError } from '../../../shared/middleware/error-handler';
+import { RetargetingService } from '../services/retargeting.service';
+
+const retargetingService = new RetargetingService();
 
 export function setupRetargetingRoutes(app: Express, prefix: string): void {
   // Get retargeting campaigns
@@ -82,9 +85,10 @@ export function setupRetargetingRoutes(app: Express, prefix: string): void {
         throw createError('Name, target audience, and retargeting rules are required', 400);
       }
 
-      const campaign = await prisma.retargetingCampaign.create({
-        data: {
-          organizationId,
+      // Use the service to create the campaign
+      const result = await retargetingService.createRetargetingCampaign(
+        organizationId,
+        {
           name,
           description,
           targetAudience,
@@ -92,18 +96,106 @@ export function setupRetargetingRoutes(app: Express, prefix: string): void {
           frequencyCaps: frequencyCaps || {},
           bidStrategy: bidStrategy || 'AUTO',
           budget,
-          startDate: startDate ? new Date(startDate) : null,
-          endDate: endDate ? new Date(endDate) : null,
-          status: 'DRAFT',
-          type: 'RETARGETING',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          startDate: startDate ? new Date(startDate) : undefined,
+          endDate: endDate ? new Date(endDate) : undefined
         }
-      });
+      );
 
       res.status(201).json({
         message: 'Retargeting campaign created successfully',
-        campaign
+        campaign: result
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Process user event for retargeting
+  app.post(`${prefix}/retargeting/events`, async (req: Request, res: Response) => {
+    try {
+      const { userId, event } = req.body;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      if (!userId || !event) {
+        throw createError('User ID and event data are required', 400);
+      }
+
+      // Process the user event using the retargeting service
+      const result = await retargetingService.processUserEvent(
+        organizationId,
+        userId,
+        event
+      );
+
+      res.json({
+        message: 'User event processed successfully',
+        eligibleCampaigns: result.eligibleCampaigns.length,
+        recommendations: result.recommendations.length,
+        nextActions: result.nextActions
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Get retargeting recommendations for a user
+  app.get(`${prefix}/retargeting/recommendations/:userId`, async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { context } = req.query;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      // Get recommendations using the retargeting service
+      const result = await retargetingService.getRetargetingRecommendations(
+        userId,
+        organizationId,
+        context ? JSON.parse(context as string) : {}
+      );
+
+      res.json({
+        message: 'Retargeting recommendations retrieved successfully',
+        ...result
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Optimize retargeting campaigns
+  app.post(`${prefix}/retargeting/optimize`, async (req: Request, res: Response) => {
+    try {
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      // Optimize campaigns using the retargeting service
+      const result = await retargetingService.optimizeDeals(organizationId);
+
+      res.json({
+        message: 'Retargeting campaigns optimized successfully',
+        ...result
       });
     } catch (error) {
       if (error.statusCode) {

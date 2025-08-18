@@ -1,6 +1,9 @@
 import { Express, Request, Response } from 'express';
 import { prisma } from '../../../shared/database/prisma';
 import { createError } from '../../../shared/middleware/error-handler';
+import { ProgrammaticService } from '../services/programmatic.service';
+
+const programmaticService = new ProgrammaticService();
 
 export function setupProgrammaticRoutes(app: Express, prefix: string): void {
   // Get programmatic deals
@@ -87,27 +90,27 @@ export function setupProgrammaticRoutes(app: Express, prefix: string): void {
         throw createError('Name, type, publisher ID, and deal terms are required', 400);
       }
 
-      const deal = await prisma.programmaticDeal.create({
-        data: {
-          organizationId,
+      // Use the service to create the deal
+      const result = await programmaticService.createDeal(
+        organizationId,
+        {
           name,
           type,
           publisherId,
           campaignId,
           dealTerms,
-          targeting: targeting || {},
+          targeting,
           budget,
           startDate: startDate ? new Date(startDate) : null,
-          endDate: endDate ? new Date(endDate) : null,
-          status: 'DRAFT',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          endDate: endDate ? new Date(endDate) : null
         }
-      });
+      );
 
       res.status(201).json({
         message: 'Programmatic deal created successfully',
-        deal
+        deal: result.deal,
+        inventory: result.inventory,
+        metrics: result.metrics
       });
     } catch (error) {
       if (error.statusCode) {
@@ -235,6 +238,102 @@ export function setupProgrammaticRoutes(app: Express, prefix: string): void {
           roas: metrics.totalSpend > 0 ? metrics.totalRevenue / metrics.totalSpend : 0,
           cpm: metrics.totalImpressions > 0 ? (metrics.totalSpend / metrics.totalImpressions) * 1000 : 0
         }
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Execute programmatic deal
+  app.post(`${prefix}/programmatic/deals/:dealId/execute`, async (req: Request, res: Response) => {
+    try {
+      const { dealId } = req.params;
+      const { adRequest } = req.body;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      if (!adRequest) {
+        throw createError('Ad request data is required', 400);
+      }
+
+      // Execute the deal using the programmatic service
+      const result = await programmaticService.executeDeal(
+        dealId,
+        organizationId,
+        adRequest
+      );
+
+      res.json({
+        message: 'Deal execution completed',
+        ...result
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Get inventory availability using service
+  app.get(`${prefix}/programmatic/inventory/availability`, async (req: Request, res: Response) => {
+    try {
+      const { publisherId, targeting, startDate, endDate } = req.query;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      if (!publisherId) {
+        throw createError('Publisher ID is required', 400);
+      }
+
+      // Get inventory availability using the programmatic service
+      const inventory = await programmaticService.getInventoryAvailability(
+        publisherId as string,
+        targeting ? JSON.parse(targeting as string) : {},
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+
+      res.json({
+        message: 'Inventory availability retrieved successfully',
+        inventory,
+        total: inventory.length
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Optimize programmatic deals
+  app.post(`${prefix}/programmatic/optimize`, async (req: Request, res: Response) => {
+    try {
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      // Optimize deals using the programmatic service
+      const result = await programmaticService.optimizeDeals(organizationId);
+
+      res.json({
+        message: 'Programmatic deals optimized successfully',
+        ...result
       });
     } catch (error) {
       if (error.statusCode) {

@@ -271,6 +271,77 @@ export function setupPredictiveBiddingRoutes(app: Express, prefix: string): void
       }
     }
   });
+
+  // Execute predictive bidding model
+  app.post(`${prefix}/predictive-bidding/models/:modelId/execute`, async (req: Request, res: Response) => {
+    try {
+      const { modelId } = req.params;
+      const { auctionData, context } = req.body;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      if (!auctionData) {
+        throw createError('Auction data is required', 400);
+      }
+
+      // Execute predictive bidding using the service
+      const result = await predictiveBiddingService.predictBid(
+        modelId,
+        organizationId,
+        auctionData,
+        context || {}
+      );
+
+      res.json({
+        message: 'Predictive bidding executed successfully',
+        ...result
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Get predictive bidding model evaluation
+  app.post(`${prefix}/predictive-bidding/models/:modelId/evaluate`, async (req: Request, res: Response) => {
+    try {
+      const { modelId } = req.params;
+      const { testData } = req.body;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      if (!testData || !Array.isArray(testData)) {
+        throw createError('Test data array is required', 400);
+      }
+
+      // Evaluate model using the service
+      const result = await predictiveBiddingService.evaluateModel(
+        modelId,
+        organizationId,
+        testData
+      );
+
+      res.json({
+        message: 'Model evaluation completed successfully',
+        ...result
+      });
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
 }
 
 import { PredictiveBiddingService } from '../services/predictive-bidding.service';
