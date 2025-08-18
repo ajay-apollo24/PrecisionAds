@@ -273,29 +273,48 @@ export function setupPredictiveBiddingRoutes(app: Express, prefix: string): void
   });
 }
 
+import { PredictiveBiddingService } from '../services/predictive-bidding.service';
+
+const predictiveBiddingService = new PredictiveBiddingService();
+
 // Helper functions for predictive bidding
 async function trainModel(model: any, trainingData: any, parameters: any): Promise<any> {
-  // Placeholder implementation - would contain actual ML training logic
-  return {
-    accuracy: Math.random() * 0.3 + 0.7, // 70-100% accuracy
-    trainingTime: Math.floor(Math.random() * 300) + 60, // 1-6 minutes
-    epochs: Math.floor(Math.random() * 50) + 100,
-    loss: Math.random() * 0.1
-  };
+  try {
+    const result = await predictiveBiddingService.trainModel(
+      model.id,
+      model.organizationId,
+      trainingData,
+      parameters
+    );
+    return result;
+  } catch (error) {
+    console.error('Error training model:', error);
+    return {
+      accuracy: 0,
+      trainingTime: 0,
+      epochs: 0,
+      loss: 1,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
 
 async function generateBidPrediction(model: any, auctionData: any, context: any): Promise<any> {
-  // Placeholder implementation - would contain actual prediction logic
-  const baseBid = auctionData.floorPrice || 1.0;
-  const multiplier = Math.random() * 0.5 + 0.8; // 0.8-1.3x multiplier
-  
-  return {
-    recommendedBid: baseBid * multiplier,
-    confidence: Math.random() * 0.3 + 0.7, // 70-100% confidence
-    factors: {
-      userValue: Math.random() * 0.4 + 0.6,
-      contextRelevance: Math.random() * 0.3 + 0.7,
-      historicalPerformance: Math.random() * 0.2 + 0.8
-    }
-  };
+  try {
+    const result = await predictiveBiddingService.predictBid(
+      model.id,
+      model.organizationId,
+      auctionData,
+      context
+    );
+    return result;
+  } catch (error) {
+    console.error('Error generating bid prediction:', error);
+    return {
+      recommendedBid: auctionData.floorPrice || 1.0,
+      confidence: 0.5,
+      factors: {},
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 } 

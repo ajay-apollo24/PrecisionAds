@@ -26,7 +26,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
       const skip = (Number(page) - 1) * Number(limit);
 
       const [campaigns, total] = await Promise.all([
-        prisma.aiOptimizationCampaign.findMany({
+        prisma.aIOptimizationCampaign.findMany({
           where,
           include: {
             models: true,
@@ -37,7 +37,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
           skip,
           take: Number(limit)
         }),
-        prisma.aiOptimizationCampaign.count({ where })
+        prisma.aIOptimizationCampaign.count({ where })
       ]);
 
       res.json({
@@ -82,7 +82,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         throw createError('Name, optimization type, and target metrics are required', 400);
       }
 
-      const campaign = await prisma.aiOptimizationCampaign.create({
+      const campaign = await prisma.aIOptimizationCampaign.create({
         data: {
           organizationId,
           name,
@@ -325,42 +325,60 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
   });
 }
 
+import { AIOptimizationService } from '../services/ai-optimization.service';
+
+const aiOptimizationService = new AIOptimizationService();
+
 // Helper functions for AI optimization
 async function startOptimization(campaign: any, parameters: any): Promise<any> {
-  // Placeholder implementation - would contain actual AI optimization logic
-  return {
-    status: 'RUNNING',
-    estimatedDuration: Math.floor(Math.random() * 60) + 30, // 30-90 minutes
-    currentIteration: 1,
-    bestScore: 0,
-    convergence: false
-  };
+  try {
+    const result = await aiOptimizationService.startOptimization(
+      campaign.id,
+      campaign.organizationId,
+      parameters.optimizationType || 'PERFORMANCE',
+      parameters
+    );
+    return result;
+  } catch (error) {
+    console.error('Error starting optimization:', error);
+    return {
+      status: 'ERROR',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
 
 async function applyRecommendation(recommendation: any, parameters: any): Promise<any> {
-  // Placeholder implementation - would contain actual recommendation application logic
-  return {
-    applied: true,
-    estimatedImpact: recommendation.impact,
-    confidence: recommendation.confidence,
-    appliedAt: new Date()
-  };
+  try {
+    // Apply the recommendation using the service
+    const result = await aiOptimizationService.applyRecommendation(
+      recommendation.id,
+      recommendation.organizationId,
+      parameters
+    );
+    return result;
+  } catch (error) {
+    console.error('Error applying recommendation:', error);
+    return {
+      applied: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
 
 async function generateAIInsights(insights: any[]): Promise<any> {
-  // Placeholder implementation - would contain actual AI insight generation
-  return {
-    keyPatterns: [
-      'User engagement peaks during evening hours',
-      'Mobile users show 25% higher conversion rates',
-      'Geographic targeting improves performance by 18%'
-    ],
-    recommendations: [
-      'Implement time-based optimization',
-      'Increase mobile bid adjustments',
-      'Expand geographic targeting'
-    ],
-    estimatedImpact: Math.random() * 0.3 + 0.1, // 10-40% improvement
-    confidence: Math.random() * 0.2 + 0.8 // 80-100% confidence
-  };
+  try {
+    // Generate insights using the service
+    const result = await aiOptimizationService.generateInsights(insights);
+    return result;
+  } catch (error) {
+    console.error('Error generating insights:', error);
+    return {
+      keyPatterns: [],
+      recommendations: [],
+      estimatedImpact: 0,
+      confidence: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 } 

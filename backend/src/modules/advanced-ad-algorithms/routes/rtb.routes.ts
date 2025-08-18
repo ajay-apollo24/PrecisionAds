@@ -1,6 +1,9 @@
 import { Express, Request, Response } from 'express';
 import { prisma } from '../../../shared/database/prisma';
 import { createError } from '../../../shared/middleware/error-handler';
+import { RTBService, BidRequest } from '../services/rtb.service';
+
+const rtbService = new RTBService();
 
 export function setupRTBRoutes(app: Express, prefix: string): void {
   // Get RTB campaigns
