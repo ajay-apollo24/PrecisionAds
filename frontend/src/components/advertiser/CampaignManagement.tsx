@@ -35,11 +35,22 @@ export function CampaignManagement({ organizationId }: CampaignManagementProps) 
   const loadCampaigns = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading campaigns with filters:', filters);
+      console.log('🔄 Organization ID:', organizationId);
+      
       const response = await advertiserService.getCampaigns(filters, organizationId);
-      setCampaigns(response.data || []);
+      console.log('📊 Campaigns API Response:', response);
+      console.log('📊 Campaigns data:', response.campaigns);
+      console.log('📊 Pagination:', response.pagination);
+      
+      // Handle both 'data' and 'campaigns' fields for backward compatibility
+      const campaignsData = response.campaigns || response.data || [];
+      setCampaigns(campaignsData);
       setPagination(response.pagination);
+      
+      console.log('✅ Campaigns state updated:', campaignsData.length, 'campaigns');
     } catch (error) {
-      console.error('Failed to load campaigns:', error);
+      console.error('💥 Failed to load campaigns:', error);
     } finally {
       setLoading(false);
     }
@@ -193,18 +204,28 @@ export function CampaignManagement({ organizationId }: CampaignManagementProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Campaign Management</h1>
-          <p className="text-muted-foreground">
-            Manage your advertising campaigns and performance
-          </p>
+              <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Campaign Management</h1>
+            <p className="text-muted-foreground">
+              Manage your advertising campaigns and performance
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={loadCampaigns}
+              disabled={loading}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Campaign
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Campaign
-        </Button>
-      </div>
 
       {/* Filters */}
       <Card>
@@ -257,15 +278,36 @@ export function CampaignManagement({ organizationId }: CampaignManagementProps) 
         <CardHeader>
           <CardTitle>Campaigns</CardTitle>
           <CardDescription>
-            {pagination.total} campaigns found
+            {loading ? 'Loading...' : (
+              <>
+                {pagination.total} campaigns found
+                {campaigns && campaigns.length > 0 && (
+                  <span className="ml-2 text-green-600">
+                    • {campaigns.length} loaded
+                  </span>
+                )}
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8">Loading campaigns...</div>
-          ) : campaigns.length === 0 ? (
+          ) : !campaigns || campaigns.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No campaigns found. Create your first campaign to get started.
+              <div className="mb-4">
+                <p className="text-lg font-medium">No campaigns found</p>
+                <p className="text-sm text-muted-foreground">
+                  {pagination.total > 0 ? 
+                    `Backend shows ${pagination.total} campaigns but data couldn't be loaded` : 
+                    'Create your first campaign to get started'
+                  }
+                </p>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Debug: campaigns.length = {campaigns?.length || 'undefined'}, 
+                pagination.total = {pagination.total}
+              </div>
             </div>
           ) : (
             <>

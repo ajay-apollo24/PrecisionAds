@@ -61,4 +61,7 @@ export function setupRoutes(app: Express): void {
       }
     });
   });
+
+  // Add 404 handler with enhanced logging
+  app.use('*', enhancedLogger404Handler);
 } 

@@ -122,7 +122,10 @@ export interface AudienceFilters {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  data?: T[];
+  campaigns?: T[];  // Backend returns 'campaigns' for campaign endpoints
+  ads?: T[];        // Backend returns 'ads' for ad endpoints  
+  audiences?: T[];  // Backend returns 'audiences' for audience endpoints
   pagination: {
     page: number;
     limit: number;

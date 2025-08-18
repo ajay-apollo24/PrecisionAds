@@ -21,15 +21,25 @@ export function AdvertiserDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading dashboard data for org:', organizationId);
+      
       const [analyticsData, campaignsData] = await Promise.all([
         advertiserService.getAnalyticsSummary(undefined, undefined, organizationId),
         advertiserService.getCampaigns({ limit: 5 }, organizationId)
       ]);
       
+      console.log('📊 Analytics data:', analyticsData);
+      console.log('📊 Campaigns data:', campaignsData);
+      console.log('📊 Recent campaigns:', campaignsData.campaigns || campaignsData.data);
+      
       setAnalytics(analyticsData);
-      setRecentCampaigns(campaignsData.data || []);
+      // Handle both 'data' and 'campaigns' fields for backward compatibility
+      const recentCampaignsData = campaignsData.campaigns || campaignsData.data || [];
+      setRecentCampaigns(recentCampaignsData);
+      
+      console.log('✅ Dashboard data loaded successfully');
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+      console.error('💥 Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
     }
