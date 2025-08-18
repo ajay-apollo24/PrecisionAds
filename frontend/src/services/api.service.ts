@@ -8,7 +8,7 @@ class ApiService {
   }
 
   // Get authentication headers
-  private getAuthHeaders(): HeadersInit {
+  private getAuthHeaders(organizationId?: string): HeadersInit {
     const token = authService.getToken();
     
     // Debug logging for token
@@ -19,20 +19,26 @@ class ApiService {
       fullToken: token || 'no token'
     });
     
-    return {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
     };
+
+    if (organizationId) {
+      headers['x-organization-id'] = organizationId;
+    }
+
+    return headers;
   }
 
   // Make authenticated GET request
-  async get<T>(endpoint: string): Promise<T> {
+  async get<T>(endpoint: string, organizationId?: string): Promise<T> {
     try {
       const fullUrl = `${this.baseUrl}${endpoint}`;
       
       const response = await fetch(fullUrl, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders(organizationId),
       });
 
       if (response.status === 429) {
@@ -85,11 +91,11 @@ class ApiService {
   }
 
   // Make authenticated POST request
-  async post<T>(endpoint: string, data: any): Promise<T> {
+  async post<T>(endpoint: string, data: any, organizationId?: string): Promise<T> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders(organizationId),
         body: JSON.stringify(data),
       });
 
@@ -100,7 +106,7 @@ class ApiService {
           // Retry with new token
           const retryResponse = await fetch(`${this.baseUrl}${endpoint}`, {
             method: 'POST',
-            headers: this.getAuthHeaders(),
+            headers: this.getAuthHeaders(organizationId),
             body: JSON.stringify(data),
           });
 
@@ -127,11 +133,11 @@ class ApiService {
   }
 
   // Make authenticated PUT request
-  async put<T>(endpoint: string, data: any): Promise<T> {
+  async put<T>(endpoint: string, data: any, organizationId?: string): Promise<T> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders(organizationId),
         body: JSON.stringify(data),
       });
 
@@ -169,11 +175,11 @@ class ApiService {
   }
 
   // Make authenticated DELETE request
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T>(endpoint: string, organizationId?: string): Promise<T> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders(organizationId),
       });
 
       if (response.status === 401) {
@@ -209,11 +215,11 @@ class ApiService {
   }
 
   // Make authenticated PATCH request
-  async patch<T>(endpoint: string, data: any): Promise<T> {
+  async patch<T>(endpoint: string, data: any, organizationId?: string): Promise<T> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'PATCH',
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders(organizationId),
         body: JSON.stringify(data),
       });
 

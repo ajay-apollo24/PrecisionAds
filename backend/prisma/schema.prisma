@@ -246,6 +246,9 @@ model User {
   lastLoginAt    DateTime?
   emailVerified  Boolean    @default(false)
   emailVerifiedAt DateTime?
+  phone          String?
+  timezone       String    @default("UTC")
+  language       String    @default("en")
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
@@ -256,6 +259,11 @@ model User {
   createdEvents Event[]
   createdTraits Trait[]
   createdCohorts Cohort[]
+  
+  // Settings relations
+  preferences UserPreferences?
+  notificationSettings UserNotificationSettings?
+  securitySettings UserSecuritySettings?
 
   @@map("users")
 }
@@ -307,6 +315,11 @@ model Organization {
   // Shared relations
   analyticsEvents AnalyticsEvent[]
   audienceSegments AudienceSegment[]
+  
+  // User settings relations
+  userPreferences UserPreferences[]
+  userNotificationSettings UserNotificationSettings[]
+  userSecuritySettings UserSecuritySettings[]
 
   @@map("organizations")
 }
@@ -1109,4 +1122,67 @@ model AudienceOptimizationRecommendation {
   createdAt      DateTime @default(now())
 
   @@map("audience_optimization_recommendations")
+}
+
+// User Settings Models
+model UserPreferences {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  organizationId        String
+  defaultBidStrategy    String   @default("TARGET_CPC")
+  defaultBudgetType     String   @default("DAILY")
+  defaultDailyBudget    Decimal  @default(100)
+  autoOptimization      Boolean  @default(true)
+  minCTR                Decimal  @default(1.0)
+  maxCPC                Decimal  @default(2.0)
+  minConversionRate     Decimal  @default(2.0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@map("user_preferences")
+}
+
+model UserNotificationSettings {
+  id                        String   @id @default(cuid())
+  userId                    String   @unique
+  organizationId            String
+  emailCampaignUpdates      Boolean  @default(true)
+  emailPerformanceAlerts    Boolean  @default(true)
+  emailBudgetWarnings       Boolean  @default(true)
+  emailWeeklyReports        Boolean  @default(true)
+  pushRealTimeAlerts        Boolean  @default(true)
+  pushMilestoneAchievements Boolean  @default(true)
+  pushSystemMaintenance     Boolean  @default(false)
+  smsCriticalAlerts         Boolean  @default(false)
+  smsBudgetExceeded         Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@map("user_notification_settings")
+}
+
+model UserSecuritySettings {
+  id                String   @id @default(cuid())
+  organizationId    String
+  userId            String   @unique
+  twoFactorEnabled  Boolean  @default(false)
+  sessionTimeout    Int      @default(30)
+  apiKeyRotation    Boolean  @default(true)
+  ipWhitelist       String[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@map("user_security_settings")
 }

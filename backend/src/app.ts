@@ -7,10 +7,14 @@ import { setupAnalyticsReportingRoutes } from './modules/analytics-reporting/rou
 import { setupAdvancedAdAlgorithmsRoutes } from './modules/advanced-ad-algorithms/routes';
 import { setupAdminRoutes } from './modules/admin/routes';
 import { setupSharedRoutes } from './shared/routes';
+import { enhancedLoggerMiddleware, enhancedLogger404Handler } from './shared/middleware/enhanced-logger';
 
 export function setupRoutes(app: Express): void {
   // API version prefix
   const apiPrefix = '/api/v1';
+
+  // Add enhanced logging middleware
+  app.use(enhancedLoggerMiddleware);
 
   // Setup core module routes
   setupPublisherRoutes(app, apiPrefix);

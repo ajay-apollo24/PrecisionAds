@@ -1,15 +1,85 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Target, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Target, TrendingUp, Users, DollarSign, Plus, BarChart3 } from 'lucide-react';
+import { advertiserService, AnalyticsSummary, Campaign } from '../../services/advertiser.service';
+import { CampaignManagement } from '../advertiser/CampaignManagement';
+import { useAuth } from '../../App';
 
 export function AdvertiserDashboard() {
+  const { user } = useAuth();
+  const organizationId = user?.organizationId || 'demo-org';
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [recentCampaigns, setRecentCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCampaignManagement, setShowCampaignManagement] = useState(false);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [analyticsData, campaignsData] = await Promise.all([
+        advertiserService.getAnalyticsSummary(undefined, undefined, organizationId),
+        advertiserService.getCampaigns({ limit: 5 }, organizationId)
+      ]);
+      
+      setAnalytics(analyticsData);
+      setRecentCampaigns(campaignsData.data || []);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  };
+
+  if (showCampaignManagement) {
+    return (
+      <CampaignManagement 
+        organizationId={organizationId}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Advertiser Dashboard</h1>
-        <p className="text-muted-foreground">
-          Manage your advertising campaigns and performance
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Advertiser Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage your advertising campaigns and performance
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button onClick={() => setShowCampaignManagement(true)}>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Manage Campaigns
+          </Button>
+          <Button onClick={() => setShowCampaignManagement(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Campaign
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -20,9 +90,11 @@ export function AdvertiserDashboard() {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : analytics?.summary.activeCampaigns || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +3 from last week
+              {loading ? 'Loading...' : `${analytics?.summary.totalCampaigns || 0} total campaigns`}
             </p>
           </CardContent>
         </Card>
@@ -33,22 +105,26 @@ export function AdvertiserDashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.4M</div>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : formatNumber(analytics?.summary.totalImpressions || 0)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +18% from last week
+              {loading ? 'Loading...' : `CTR: ${(analytics?.summary.overallCTR || 0).toFixed(2)}%`}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Click-Through Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3.2%</div>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : formatNumber(analytics?.summary.totalClicks || 0)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +0.5% from last week
+              {loading ? 'Loading...' : `Conv. Rate: ${(analytics?.summary.overallConversionRate || 0).toFixed(2)}%`}
             </p>
           </CardContent>
         </Card>
@@ -59,57 +135,122 @@ export function AdvertiserDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$12,450</div>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : formatCurrency(analytics?.summary.totalSpent || 0)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +8% from last week
+              {loading ? 'Loading...' : `Budget: ${formatCurrency(analytics?.summary.totalBudget || 0)}`}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Campaign Performance */}
+      {/* Performance Metrics */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">CPM</CardTitle>
+            <CardDescription>Cost per thousand impressions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {loading ? '...' : `$${(analytics?.summary.overallCPM || 0).toFixed(2)}`}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">CPC</CardTitle>
+            <CardDescription>Cost per click</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {loading ? '...' : `$${(analytics?.summary.overallCPC || 0).toFixed(2)}`}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">CPA</CardTitle>
+            <CardDescription>Cost per acquisition</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {loading ? '...' : `$${(analytics?.summary.overallCPA || 0).toFixed(2)}`}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Performing Campaigns */}
+      {analytics?.topCampaigns && analytics.topCampaigns.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Performing Campaigns</CardTitle>
+            <CardDescription>
+              Your best performing campaigns by clicks
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analytics.topCampaigns.map((campaign) => (
+                <div key={campaign.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h3 className="font-medium">{campaign.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {campaign.clicks.toLocaleString()} clicks • {campaign.impressions.toLocaleString()} impressions
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{campaign.ctr.toFixed(2)}% CTR</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatCurrency(campaign.spent)} spent
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Campaigns */}
       <Card>
         <CardHeader>
-          <CardTitle>Campaign Performance</CardTitle>
+          <CardTitle>Recent Campaigns</CardTitle>
           <CardDescription>
-            Overview of your active campaigns
+            Your latest campaigns and their status
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">Summer Sale Campaign</h3>
-                <p className="text-sm text-muted-foreground">Active • 15 days remaining</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$4,250</p>
-                <p className="text-sm text-muted-foreground">spent</p>
-              </div>
+          {loading ? (
+            <div className="text-center py-8">Loading campaigns...</div>
+          ) : recentCampaigns.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No campaigns yet. Create your first campaign to get started.
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">Brand Awareness</h3>
-                <p className="text-sm text-muted-foreground">Active • 8 days remaining</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$2,800</p>
-                <p className="text-sm text-muted-foreground">spent</p>
-              </div>
+          ) : (
+            <div className="space-y-4">
+              {recentCampaigns.map((campaign) => (
+                <div key={campaign.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h3 className="font-medium">{campaign.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {campaign.status} • {campaign.type} • {campaign.ads?.length || 0} ads
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{formatCurrency(campaign.totalSpent)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : 0}% CTR
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">Product Launch</h3>
-                <p className="text-sm text-muted-foreground">Active • 22 days remaining</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$5,400</p>
-                <p className="text-sm text-muted-foreground">spent</p>
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

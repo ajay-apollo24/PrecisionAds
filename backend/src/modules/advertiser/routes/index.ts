@@ -3,6 +3,7 @@ import { setupCampaignRoutes } from './campaigns.routes';
 import { setupAdsRoutes } from './ads.routes';
 import { setupAudiencesRoutes } from './audiences.routes';
 import { setupAnalyticsRoutes } from './analytics.routes';
+import { setupSettingsRoutes } from './settings.routes';
 
 export function setupAdvertiserRoutes(app: Express, apiPrefix: string): void {
   const advertiserPrefix = `${apiPrefix}/advertiser`;
@@ -11,4 +12,5 @@ export function setupAdvertiserRoutes(app: Express, apiPrefix: string): void {
   setupAdsRoutes(app, advertiserPrefix);
   setupAudiencesRoutes(app, advertiserPrefix);
   setupAnalyticsRoutes(app, advertiserPrefix);
+  setupSettingsRoutes(app, advertiserPrefix);
 } 

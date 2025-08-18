@@ -9,6 +9,10 @@ import { RealTimeDashboard } from './dashboards/RealTimeDashboard';
 import { OrganizationManagement } from './admin/OrganizationManagement';
 import { UserManagement } from './admin/UserManagement';
 import { APIKeysManagement } from './admin/APIKeysManagement';
+import { CampaignManagement } from './advertiser/CampaignManagement';
+import { AnalyticsView } from './advertiser/AnalyticsView';
+import { AudiencesView } from './advertiser/AudiencesView';
+import { SettingsView } from './advertiser/SettingsView';
 import { Sidebar } from './ui/sidebar';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -90,11 +94,11 @@ export function DashboardLayout() {
       case 'api-keys':
         return <APIKeysManagement />;
       case 'campaigns':
-        return <div>Campaigns Screen - Coming Soon</div>;
+        return <CampaignManagement organizationId={user?.organizationId || 'demo-org'} />;
       case 'analytics':
-        return <div>Analytics Screen - Coming Soon</div>;
+        return <AnalyticsView organizationId={user?.organizationId || 'demo-org'} />;
       case 'audiences':
-        return <div>Audiences Screen - Coming Soon</div>;
+        return <AudiencesView organizationId={user?.organizationId || 'demo-org'} />;
       case 'sites':
         return <div>Sites Screen - Coming Soon</div>;
       case 'ad-units':
@@ -102,7 +106,7 @@ export function DashboardLayout() {
       case 'earnings':
         return <div>Earnings Screen - Coming Soon</div>;
       case 'settings':
-        return <div>Settings Screen - Coming Soon</div>;
+        return <SettingsView />;
       default:
         return renderMainDashboard();
     }
