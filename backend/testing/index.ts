@@ -4,6 +4,7 @@
 export { default as APITester } from './api-tester';
 export { default as runTests } from './run-tests';
 export { default as demo } from './demo';
+export { default as ComprehensiveTestRunner } from './run-comprehensive-tests';
 export { default as defaultTestConfig, loadTestConfig, validateTestConfig, printTestConfig } from './config';
 export type { TestResult, TestSuite, TestCase } from './api-tester';
 export type { TestConfig } from './config';
@@ -18,6 +19,7 @@ export {
   adServingTestSuite,
   analyticsTestSuite,
   audienceTestSuite,
+  advertiserTestSuite,
   advancedAlgorithmsTestSuite,
   allTestSuites
 } from './test-suites';
@@ -77,6 +79,80 @@ export async function testCanonicalSpec(
   // Future versions will support dynamic header injection
   
   return tester.runTestSuite(canonicalTestSuite);
+}
+
+/**
+ * Run analytics module tests
+ * @param baseURL - Base URL of the server to test
+ */
+export async function testAnalyticsModule(baseURL: string = 'http://localhost:7401') {
+  const { analyticsTestSuite } = await import('./test-suites');
+  const tester = new (await import('./api-tester')).default(baseURL);
+  
+  return tester.runTestSuite(analyticsTestSuite);
+}
+
+/**
+ * Run audience management module tests
+ * @param baseURL - Base URL of the server to test
+ */
+export async function testAudienceModule(baseURL: string = 'http://localhost:7401') {
+  const { audienceTestSuite } = await import('./test-suites');
+  const tester = new (await import('./api-tester')).default(baseURL);
+  
+  return tester.runTestSuite(audienceTestSuite);
+}
+
+/**
+ * Run ad serving module tests
+ * @param baseURL - Base URL of the server to test
+ */
+export async function testAdServingModule(baseURL: string = 'http://localhost:7401') {
+  const { adServingTestSuite } = await import('./test-suites');
+  const tester = new (await import('./api-tester')).default(baseURL);
+  
+  return tester.runTestSuite(adServingTestSuite);
+}
+
+/**
+ * Run advertiser module tests
+ * @param baseURL - Base URL of the server to test
+ */
+export async function testAdvertiserModule(baseURL: string = 'http://localhost:7401') {
+  const { advertiserTestSuite } = await import('./test-suites');
+  const tester = new (await import('./api-tester')).default(baseURL);
+  
+  return tester.runTestSuite(advertiserTestSuite);
+}
+
+/**
+ * Run advanced algorithms module tests
+ * @param baseURL - Base URL of the server to test
+ */
+export async function testAdvancedAlgorithmsModule(baseURL: string = 'http://localhost:7401') {
+  const { advancedAlgorithmsTestSuite } = await import('./test-suites');
+  const tester = new (await import('./api-tester')).default(baseURL);
+  
+  return tester.runTestSuite(advancedAlgorithmsTestSuite);
+}
+
+/**
+ * Run comprehensive tests (unit + API)
+ * @param baseURL - Base URL of the server to test
+ * @param categories - Specific test categories to run
+ */
+export async function runComprehensiveTests(
+  baseURL: string = 'http://localhost:7401',
+  categories?: string[]
+) {
+  const ComprehensiveTestRunner = (await import('./run-comprehensive-tests')).default;
+  const runner = new ComprehensiveTestRunner(baseURL);
+  
+  if (categories && categories.length > 0) {
+    return await runner.runSpecificTests(categories);
+  } else {
+    return await runner.runAllTests();
+  }
 }
 
 /**

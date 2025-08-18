@@ -112,7 +112,7 @@ export function setupAdServingRoutes(app: Express, prefix: string): void {
         } : null,
         status: selectedAd ? 'SERVED' : 'NO_AD_AVAILABLE'
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -124,14 +124,15 @@ export function setupAdServingRoutes(app: Express, prefix: string): void {
   // Ad impression tracking
   app.post(`${prefix}/impression`, async (req: Request, res: Response) => {
     try {
-      const { requestId } = req.body;
+      const { requestId, adRequestId } = req.body;
+      const id = requestId || adRequestId;
 
-      if (!requestId) {
-        throw createError('Request ID required', 400);
+      if (!id) {
+        throw createError('Request ID or Ad Request ID required', 400);
       }
 
       const adRequest = await prisma.adRequest.findUnique({
-        where: { requestId }
+        where: { requestId: id }
       });
 
       if (!adRequest) {
@@ -144,8 +145,8 @@ export function setupAdServingRoutes(app: Express, prefix: string): void {
         data: { impression: true }
       });
 
-      res.json({ message: 'Impression tracked successfully' });
-    } catch (error) {
+      res.json({ success: true, message: 'Impression tracked successfully' });
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -157,14 +158,15 @@ export function setupAdServingRoutes(app: Express, prefix: string): void {
   // Ad click tracking
   app.post(`${prefix}/click`, async (req: Request, res: Response) => {
     try {
-      const { requestId } = req.body;
+      const { requestId, adRequestId } = req.body;
+      const id = requestId || adRequestId;
 
-      if (!requestId) {
-        throw createError('Request ID required', 400);
+      if (!id) {
+        throw createError('Request ID or Ad Request ID required', 400);
       }
 
       const adRequest = await prisma.adRequest.findUnique({
-        where: { requestId },
+        where: { requestId: id },
         include: { adUnit: true }
       });
 
@@ -188,8 +190,165 @@ export function setupAdServingRoutes(app: Express, prefix: string): void {
         });
       }
 
-      res.json({ message: 'Click tracked successfully' });
-    } catch (error) {
+      res.json({ success: true, message: 'Click tracked successfully' });
+    } catch (error: any) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Ad conversion tracking
+  app.post(`${prefix}/conversion`, async (req: Request, res: Response) => {
+    try {
+      const { requestId, adRequestId, conversionType, conversionValue, timestamp } = req.body;
+      const id = requestId || adRequestId;
+
+      if (!id || !conversionType) {
+        throw createError('Request ID (or Ad Request ID) and conversion type required', 400);
+      }
+
+      const adRequest = await prisma.adRequest.findUnique({
+        where: { requestId: id },
+        include: { adUnit: true }
+      });
+
+      if (!adRequest) {
+        throw createError('Ad request not found', 404);
+      }
+
+      // Create conversion event
+      const conversionEvent = await prisma.analyticsEvent.create({
+        data: {
+          organizationId: adRequest.organizationId,
+          eventType: 'conversion',
+          eventData: {
+            adRequestId: adRequest.id,
+            conversionType,
+            conversionValue: conversionValue || 0,
+            timestamp: timestamp ? new Date(timestamp) : new Date()
+          },
+          timestamp: timestamp ? new Date(timestamp) : new Date()
+        }
+      });
+
+      // Update ad metrics if ad was served
+      if (adRequest.servedAdId) {
+        await prisma.advertiserAd.update({
+          where: { id: adRequest.servedAdId },
+          data: {
+            conversions: { increment: 1 }
+          }
+        });
+      }
+
+      res.json({ 
+        success: true,
+        message: 'Conversion tracked successfully',
+        conversionId: conversionEvent.id
+      });
+    } catch (error: any) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Get ad request status
+  app.get(`${prefix}/request/:requestId`, async (req: Request, res: Response) => {
+    try {
+      const { requestId } = req.params;
+
+      const adRequest = await prisma.adRequest.findUnique({
+        where: { requestId },
+        include: {
+          adUnit: true
+        }
+      });
+
+      if (!adRequest) {
+        throw createError('Ad request not found', 404);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          id: adRequest.id,
+          requestId: adRequest.requestId,
+          status: adRequest.status,
+          impression: adRequest.impression,
+          clickThrough: adRequest.clickThrough,
+          adUnit: adRequest.adUnit,
+          servedAdId: adRequest.servedAdId,
+          createdAt: adRequest.createdAt
+        }
+      });
+    } catch (error: any) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // Get ad serving metrics
+  app.get(`${prefix}/metrics`, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, organizationId } = req.query;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      const where: any = { organizationId: organizationId as string };
+
+      if (startDate && endDate) {
+        where.createdAt = {
+          gte: new Date(startDate as string),
+          lte: new Date(endDate as string)
+        };
+      }
+
+      const [totalRequests, servedRequests, impressions, clicks, conversions] = await Promise.all([
+        prisma.adRequest.count({ where }),
+        prisma.adRequest.count({ where: { ...where, status: 'SERVED' } }),
+        prisma.adRequest.count({ where: { ...where, impression: true } }),
+        prisma.adRequest.count({ where: { ...where, clickThrough: true } }),
+        prisma.analyticsEvent.count({ 
+          where: { 
+            organizationId: where.organizationId,
+            eventType: 'conversion'
+          } 
+        })
+      ]);
+
+      const fillRate = totalRequests > 0 ? (servedRequests / totalRequests) * 100 : 0;
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+      const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0;
+
+      res.json({
+        success: true,
+        metrics: {
+          totalRequests,
+          servedRequests,
+          impressions,
+          clicks,
+          conversions,
+          fillRate: Math.round(fillRate * 100) / 100,
+          ctr: Math.round(ctr * 100) / 100,
+          conversionRate: Math.round(conversionRate * 100) / 100
+        },
+        period: {
+          startDate: startDate || 'all',
+          endDate: endDate || 'all'
+        }
+      });
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {

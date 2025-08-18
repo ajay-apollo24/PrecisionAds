@@ -17,7 +17,7 @@ const customFormat = winston.format.combine(
   winston.format.printf(({ timestamp, level, message, metadata, stack }) => {
     let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
     
-    if (Object.keys(metadata).length > 0) {
+    if (metadata && typeof metadata === 'object' && Object.keys(metadata as object).length > 0) {
       log += ` | Metadata: ${JSON.stringify(metadata)}`;
     }
     

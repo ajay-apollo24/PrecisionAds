@@ -223,6 +223,7 @@ export class OrganizationService {
             where: { id },
             data: {
               ...data,
+              orgType: data.orgType as any,
               updatedAt: new Date()
             },
             include: {

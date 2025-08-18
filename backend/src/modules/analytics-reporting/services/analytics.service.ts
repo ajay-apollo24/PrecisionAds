@@ -59,7 +59,7 @@ export class AnalyticsService {
       where.adId = adId;
     }
 
-    let performanceData;
+    let performanceData: any[];
     if (groupBy === 'hour') {
       performanceData = await this.getHourlyData(where);
     } else if (groupBy === 'week') {
@@ -463,7 +463,7 @@ export class AnalyticsService {
   }
 
   // Private helper methods
-  private async getHourlyData(where: any) {
+  private async getHourlyData(where: any): Promise<any[]> {
     return await prisma.$queryRaw`
       SELECT 
         DATE_TRUNC('hour', date) as period,
@@ -485,7 +485,7 @@ export class AnalyticsService {
     `;
   }
 
-  private async getWeeklyData(where: any) {
+  private async getWeeklyData(where: any): Promise<any[]> {
     return await prisma.$queryRaw`
       SELECT 
         DATE_TRUNC('week', date) as period,
@@ -507,7 +507,7 @@ export class AnalyticsService {
     `;
   }
 
-  private async getMonthlyData(where: any) {
+  private async getMonthlyData(where: any): Promise<any[]> {
     return await prisma.$queryRaw`
       SELECT 
         DATE_TRUNC('month', date) as period,

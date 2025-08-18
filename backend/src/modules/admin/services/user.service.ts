@@ -476,7 +476,7 @@ export class UserService {
         duration,
         'ms',
         'ADMIN',
-        { count: userIds.length, status }
+        { count: userIds.length.toString(), status }
       );
 
       return users;

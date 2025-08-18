@@ -90,10 +90,10 @@ export class AudienceService {
         organizationId,
         name,
         description,
-        type,
+        type: type as any,
         targetingRules: targetingRules || {},
         estimatedSize,
-        status,
+        status: status as any,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -548,9 +548,6 @@ export class AudienceService {
     const [optimizations, total] = await Promise.all([
       prisma.audienceOptimization.findMany({
         where,
-        include: {
-          segment: true
-        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit

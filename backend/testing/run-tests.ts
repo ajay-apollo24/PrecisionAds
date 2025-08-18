@@ -10,6 +10,7 @@ import allTestSuites, {
   adServingTestSuite,
   analyticsTestSuite,
   audienceTestSuite,
+  advertiserTestSuite,
   advancedAlgorithmsTestSuite
 } from './test-suites';
 import { logger } from '../src/shared/middleware/logger';
@@ -49,7 +50,8 @@ async function main() {
     console.log('   6. Ad Serving Endpoints');
     console.log('   7. Analytics & Reporting Endpoints');
     console.log('   8. Audience Management Endpoints');
-    console.log('   9. Advanced Algorithms Endpoints');
+    console.log('   9. Advertiser Module Endpoints');
+    console.log('   10. Advanced Algorithms Endpoints');
     console.log('   0. All Test Suites');
     
     // If specific suite is requested
@@ -83,13 +85,16 @@ async function main() {
           selectedSuite = audienceTestSuite;
           break;
         case 9:
+          selectedSuite = advertiserTestSuite;
+          break;
+        case 10:
           selectedSuite = advancedAlgorithmsTestSuite;
           break;
         case 0:
           selectedSuite = allTestSuites;
           break;
         default:
-          console.log('❌ Invalid suite number. Please choose 1-9 or 0 for all.');
+          console.log('❌ Invalid suite number. Please choose 1-10 or 0 for all.');
           process.exit(1);
       }
       
