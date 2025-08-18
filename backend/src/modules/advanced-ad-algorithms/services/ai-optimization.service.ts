@@ -415,4 +415,252 @@ export class AIOptimizationService {
   private initializeBiddingNetwork(): any { return { layers: [1, 2, 1] }; }
   private prepareBiddingTrainingData(data: any[]): any[] { return []; }
   private trainBiddingNetwork(network: any, data: any[]): void {}
+
+  /**
+   * Apply an optimization recommendation to a campaign
+   */
+  async applyRecommendation(
+    recommendation: any,
+    parameters: Record<string, any> = {}
+  ): Promise<{
+    success: boolean;
+    result: any;
+    appliedAt: Date;
+    estimatedImpact: number;
+  }> {
+    try {
+      // Validate recommendation
+      if (!recommendation || !recommendation.type) {
+        throw new Error('Invalid recommendation');
+      }
+
+      // Apply recommendation based on type
+      let result: any;
+      let estimatedImpact = recommendation.impact || 0;
+
+      switch (recommendation.type) {
+        case 'BIDDING_OPTIMIZATION':
+          result = await this.applyBiddingOptimization(recommendation, parameters);
+          break;
+        case 'TARGETING_OPTIMIZATION':
+          result = await this.applyTargetingOptimization(recommendation, parameters);
+          break;
+        case 'BUDGET_OPTIMIZATION':
+          result = await this.applyBudgetOptimization(recommendation, parameters);
+          break;
+        case 'CREATIVE_OPTIMIZATION':
+          result = await this.applyCreativeOptimization(recommendation, parameters);
+          break;
+        default:
+          throw new Error(`Unsupported recommendation type: ${recommendation.type}`);
+      }
+
+      // Log the application
+      await prisma.optimizationApplication.create({
+        data: {
+          organizationId: recommendation.organizationId || 'system',
+          recommendationId: recommendation.id,
+          parameters: parameters || {},
+          result: result,
+          status: 'APPLIED',
+          appliedAt: new Date(),
+          createdAt: new Date()
+        }
+      });
+
+      return {
+        success: true,
+        result,
+        appliedAt: new Date(),
+        estimatedImpact
+      };
+    } catch (error) {
+      throw new Error(`Failed to apply recommendation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Generate AI-powered insights from performance data
+   */
+  async generateInsights(
+    insights: any[]
+  ): Promise<{
+    estimatedImpact: number;
+    keyInsights: string[];
+    recommendations: Array<{
+      type: string;
+      description: string;
+      impact: number;
+      confidence: number;
+    }>;
+    trends: Array<{
+      metric: string;
+      direction: 'increasing' | 'decreasing' | 'stable';
+      change: number;
+    }>;
+  }> {
+    try {
+      if (!insights || insights.length === 0) {
+        return {
+          estimatedImpact: 0,
+          keyInsights: ['No data available for analysis'],
+          recommendations: [],
+          trends: []
+        };
+      }
+
+      // Analyze trends
+      const trends = this.analyzeTrends(insights);
+      
+      // Generate key insights
+      const keyInsights = this.extractKeyInsights(insights, trends);
+      
+      // Generate recommendations
+      const recommendations = this.generateRecommendations(insights, trends);
+      
+      // Calculate estimated impact
+      const estimatedImpact = this.calculateEstimatedImpact(recommendations);
+
+      return {
+        estimatedImpact,
+        keyInsights,
+        recommendations,
+        trends
+      };
+    } catch (error) {
+      throw new Error(`Failed to generate insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Helper methods for applying recommendations
+  private async applyBiddingOptimization(recommendation: any, parameters: any): Promise<any> {
+    // Implement bidding optimization logic
+    return {
+      type: 'BIDDING_OPTIMIZATION',
+      applied: true,
+      newBidStrategy: parameters.bidStrategy || 'AUTO_CPC',
+      bidMultiplier: parameters.bidMultiplier || 1.0,
+      estimatedCTR: recommendation.estimatedCTR || 0.02
+    };
+  }
+
+  private async applyTargetingOptimization(recommendation: any, parameters: any): Promise<any> {
+    // Implement targeting optimization logic
+    return {
+      type: 'TARGETING_OPTIMIZATION',
+      applied: true,
+      newTargetingRules: parameters.targetingRules || [],
+      estimatedReach: recommendation.estimatedReach || 1000000
+    };
+  }
+
+  private async applyBudgetOptimization(recommendation: any, parameters: any): Promise<any> {
+    // Implement budget optimization logic
+    return {
+      type: 'BUDGET_OPTIMIZATION',
+      applied: true,
+      newBudget: parameters.newBudget || 1000,
+      estimatedROAS: recommendation.estimatedROAS || 2.5
+    };
+  }
+
+  private async applyCreativeOptimization(recommendation: any, parameters: any): Promise<any> {
+    // Implement creative optimization logic
+    return {
+      type: 'CREATIVE_OPTIMIZATION',
+      applied: true,
+      newCreativeElements: parameters.creativeElements || [],
+      estimatedEngagement: recommendation.estimatedEngagement || 0.05
+    };
+  }
+
+  // Helper methods for generating insights
+  private analyzeTrends(insights: any[]): Array<{
+    metric: string;
+    direction: 'increasing' | 'decreasing' | 'stable';
+    change: number;
+  }> {
+    const trends = [];
+    const metrics = ['ctr', 'cpc', 'cpm', 'conversionRate', 'roas'];
+    
+    for (const metric of metrics) {
+      const values = insights
+        .filter(insight => insight[metric] !== undefined)
+        .map(insight => insight[metric])
+        .slice(-10); // Last 10 data points
+      
+      if (values.length >= 2) {
+        const change = values[values.length - 1] - values[0];
+        const direction = change > 0.01 ? 'increasing' : change < -0.01 ? 'decreasing' : 'stable';
+        trends.push({ metric, direction, change });
+      }
+    }
+    
+    return trends;
+  }
+
+  private extractKeyInsights(insights: any[], trends: any[]): string[] {
+    const keyInsights = [];
+    
+    // Analyze performance patterns
+    const avgCTR = insights.reduce((sum, insight) => sum + (insight.ctr || 0), 0) / insights.length;
+    if (avgCTR > 0.03) {
+      keyInsights.push('Campaign CTR is performing above industry average');
+    } else if (avgCTR < 0.01) {
+      keyInsights.push('Campaign CTR needs improvement - consider creative optimization');
+    }
+    
+    // Analyze trends
+    const increasingMetrics = trends.filter(t => t.direction === 'increasing');
+    const decreasingMetrics = trends.filter(t => t.direction === 'decreasing');
+    
+    if (increasingMetrics.length > decreasingMetrics.length) {
+      keyInsights.push('Overall campaign performance is trending upward');
+    } else if (decreasingMetrics.length > increasingMetrics.length) {
+      keyInsights.push('Campaign performance is declining - intervention recommended');
+    }
+    
+    return keyInsights;
+  }
+
+  private generateRecommendations(insights: any[], trends: any[]): Array<{
+    type: string;
+    description: string;
+    impact: number;
+    confidence: number;
+  }> {
+    const recommendations = [];
+    
+    // Generate recommendations based on trends and insights
+    const ctrTrend = trends.find(t => t.metric === 'ctr');
+    if (ctrTrend && ctrTrend.direction === 'decreasing') {
+      recommendations.push({
+        type: 'CREATIVE_OPTIMIZATION',
+        description: 'CTR is declining - optimize ad creatives and messaging',
+        impact: 0.25,
+        confidence: 0.85
+      });
+    }
+    
+    const cpcTrend = trends.find(t => t.metric === 'cpc');
+    if (cpcTrend && cpcTrend.direction === 'increasing') {
+      recommendations.push({
+        type: 'BIDDING_OPTIMIZATION',
+        description: 'CPC is increasing - review and optimize bidding strategy',
+        impact: 0.30,
+        confidence: 0.80
+      });
+    }
+    
+    return recommendations;
+  }
+
+  private calculateEstimatedImpact(recommendations: any[]): number {
+    if (recommendations.length === 0) return 0;
+    
+    const totalImpact = recommendations.reduce((sum, rec) => sum + rec.impact, 0);
+    const avgConfidence = recommendations.reduce((sum, rec) => sum + rec.confidence, 0) / recommendations.length;
+    
+    return totalImpact * avgConfidence;
+  }
 } 

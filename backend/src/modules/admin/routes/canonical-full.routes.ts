@@ -58,14 +58,14 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         });
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'Identity created successfully',
           data: identity
         });
       } catch (error: any) {
         console.error('Error creating identity:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -93,13 +93,13 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           return res.status(404).json({ error: 'Identity not found' });
         }
 
-        res.json({
+        return res.json({
           success: true,
           data: identity
         });
       } catch (error: any) {
         console.error('Error getting identity:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -136,14 +136,14 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         });
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'Trait created successfully',
           data: trait
         });
       } catch (error: any) {
         console.error('Error creating trait:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -167,13 +167,13 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         });
 
-        res.json({
+        return res.json({
           success: true,
           data: traits
         });
       } catch (error: any) {
         console.error('Error getting traits:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -212,14 +212,14 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         });
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'Cohort created successfully',
           data: cohort
         });
       } catch (error: any) {
         console.error('Error creating cohort:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -247,13 +247,13 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           return res.status(404).json({ error: 'Cohort not found' });
         }
 
-        res.json({
+        return res.json({
           success: true,
           data: cohort
         });
       } catch (error: any) {
         console.error('Error getting cohort:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -292,14 +292,14 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         });
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'Event tracked successfully',
           data: event
         });
       } catch (error: any) {
         console.error('Error tracking event:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -326,13 +326,13 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         });
 
-        res.json({
+        return res.json({
           success: true,
           data: events
         });
       } catch (error: any) {
         console.error('Error getting events:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );
@@ -409,7 +409,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         }
 
-        res.json({
+        return res.json({
           success: true,
           results: {
             total: operations.length,
@@ -420,7 +420,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
         });
       } catch (error: any) {
         console.error('Error in batch operations:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   );

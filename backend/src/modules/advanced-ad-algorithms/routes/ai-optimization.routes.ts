@@ -40,7 +40,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         prisma.aIOptimizationCampaign.count({ where })
       ]);
 
-      res.json({
+      return res.json({
         campaigns,
         pagination: {
           page: Number(page),
@@ -49,11 +49,11 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
           pages: Math.ceil(total / Number(limit))
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
-        res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   });
@@ -99,15 +99,15 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         }
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         message: 'AI optimization campaign created successfully',
         campaign
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
-        res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   });
@@ -123,7 +123,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         throw createError('Organization ID required', 400);
       }
 
-      const campaign = await prisma.aiOptimizationCampaign.findFirst({
+      const campaign = await prisma.aIOptimizationCampaign.findFirst({
         where: { 
           id,
           organizationId 
@@ -138,7 +138,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
       const optimizationResult = await startOptimization(campaign, parameters);
 
       // Update campaign status
-      const updatedCampaign = await prisma.aiOptimizationCampaign.update({
+      const updatedCampaign = await prisma.aIOptimizationCampaign.update({
         where: { id },
         data: {
           status: 'RUNNING',
@@ -147,16 +147,16 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         }
       });
 
-      res.json({
+      return res.json({
         message: 'AI optimization started successfully',
         campaign: updatedCampaign,
         optimizationResult
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
-        res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   });
@@ -181,7 +181,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         where.type = type;
       }
 
-      const recommendations = await prisma.aiOptimizationRecommendation.findMany({
+      const recommendations = await prisma.aIOptimizationRecommendation.findMany({
         where,
         include: {
           campaign: true,
@@ -200,7 +200,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         return acc;
       }, {});
 
-      res.json({
+      return res.json({
         recommendations,
         groupedRecommendations,
         summary: {
@@ -210,11 +210,11 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
           lowImpact: recommendations.filter((r: any) => r.impact <= 0.05).length
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
-        res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   });
@@ -230,7 +230,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         throw createError('Organization ID required', 400);
       }
 
-      const recommendation = await prisma.aiOptimizationRecommendation.findFirst({
+      const recommendation = await prisma.aIOptimizationRecommendation.findFirst({
         where: { 
           id,
           organizationId 
@@ -257,16 +257,16 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         }
       });
 
-      res.json({
+      return res.json({
         message: 'Optimization recommendation applied successfully',
         application,
         result: applicationResult
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
-        res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   });
@@ -298,7 +298,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
         };
       }
 
-      const insights = await prisma.aiModelInsight.findMany({
+      const insights = await prisma.aIModelInsight.findMany({
         where,
         orderBy: { date: 'desc' }
       });
@@ -306,7 +306,7 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
       // Generate AI-powered insights (placeholder)
       const aiInsights = await generateAIInsights(insights);
 
-      res.json({
+      return res.json({
         insights,
         aiInsights,
         summary: {
@@ -315,11 +315,11 @@ export function setupAIOptimizationRoutes(app: Express, prefix: string): void {
           optimizationImpact: aiInsights.estimatedImpact
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
-        res.status(error.statusCode).json({ error: error.message });
+        return res.status(error.statusCode).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   });

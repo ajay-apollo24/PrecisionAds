@@ -4,17 +4,8 @@ import { prisma } from '../../../../src/shared/database/prisma';
 // Mock Prisma
 jest.mock('../../../../src/shared/database/prisma', () => ({
   prisma: {
-    advertiserAd: {
-      findMany: jest.fn(),
-      update: jest.fn(),
-    },
-    adRequest: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-    analyticsEvent: {
-      findMany: jest.fn(),
-      aggregate: jest.fn(),
+    adUnit: {
+      findFirst: jest.fn(),
     },
   },
 }));
@@ -29,192 +20,153 @@ describe('OptimizationService', () => {
     jest.clearAllMocks();
   });
 
-  describe('optimizeAdSelection', () => {
-    it('should optimize ad selection based on performance', async () => {
+  describe('optimizeAdServing', () => {
+    it('should optimize ad serving based on performance data', async () => {
       const adUnitId = 'unit-1';
       const organizationId = 'org-1';
-      const userContext = {
-        geoLocation: { country: 'US' },
-        deviceType: 'desktop',
-        interests: ['technology'],
+
+      const mockAdUnit = {
+        id: 'unit-1',
+        organizationId: 'org-1',
+        name: 'Test Ad Unit',
+        adRequests: [
+          { id: 'req-1', impression: true, clickThrough: false, createdAt: new Date() },
+          { id: 'req-2', impression: true, clickThrough: true, createdAt: new Date() },
+          { id: 'req-3', impression: false, clickThrough: false, createdAt: new Date() },
+        ],
       };
 
-      const mockAds = [
-        {
-          id: 'ad-1',
-          ctr: 0.05,
-          conversionRate: 0.02,
-          relevanceScore: 0.8,
-          bidPrice: 2.5,
-        },
-        {
-          id: 'ad-2',
-          ctr: 0.03,
-          conversionRate: 0.01,
-          relevanceScore: 0.6,
-          bidPrice: 3.0,
-        },
-      ];
+      mockPrisma.adUnit.findFirst.mockResolvedValue(mockAdUnit);
 
-      mockPrisma.advertiserAd.findMany.mockResolvedValue(mockAds);
-
-      const result = await optimizationService.optimizeAdSelection(
-        adUnitId,
-        organizationId,
-        userContext
-      );
+      const result = await optimizationService.optimizeAdServing(adUnitId, organizationId);
 
       expect(result).toBeDefined();
-      expect(result.optimizedAds).toBeDefined();
-      expect(result.optimizationScore).toBeDefined();
-      expect(mockPrisma.advertiserAd.findMany).toHaveBeenCalled();
+      expect(result.recommendations).toBeDefined();
+      expect(result.optimizedSettings).toBeDefined();
+      expect(mockPrisma.adUnit.findFirst).toHaveBeenCalledWith({
+        where: { id: adUnitId, organizationId },
+        include: {
+          adRequests: {
+            where: {
+              createdAt: {
+                gte: expect.any(Date)
+              }
+            }
+          }
+        }
+      });
     });
 
-    it('should handle no ads available', async () => {
+    it('should handle ad unit not found', async () => {
+      const adUnitId = 'invalid-unit';
+      const organizationId = 'org-1';
+
+      mockPrisma.adUnit.findFirst.mockResolvedValue(null);
+
+      await expect(optimizationService.optimizeAdServing(adUnitId, organizationId))
+        .rejects.toThrow('Ad unit not found');
+    });
+
+    it('should handle ad unit with no requests', async () => {
       const adUnitId = 'unit-1';
       const organizationId = 'org-1';
-      const userContext = {
-        geoLocation: { country: 'US' },
-        deviceType: 'desktop',
+
+      const mockAdUnit = {
+        id: 'unit-1',
+        organizationId: 'org-1',
+        name: 'Test Ad Unit',
+        adRequests: [],
       };
 
-      mockPrisma.advertiserAd.findMany.mockResolvedValue([]);
+      mockPrisma.adUnit.findFirst.mockResolvedValue(mockAdUnit);
 
-      const result = await optimizationService.optimizeAdSelection(
-        adUnitId,
-        organizationId,
-        userContext
-      );
-
-      expect(result.optimizedAds).toHaveLength(0);
-      expect(result.optimizationScore).toBe(0);
-    });
-  });
-
-  describe('calculatePerformanceScore', () => {
-    it('should calculate performance score correctly', () => {
-      const ad = {
-        ctr: 0.05,
-        conversionRate: 0.02,
-        relevanceScore: 0.8,
-        bidPrice: 2.5,
-      };
-
-      const result = (optimizationService as any).calculatePerformanceScore(ad);
-
-      expect(result).toBeGreaterThan(0);
-      expect(typeof result).toBe('number');
-    });
-
-    it('should handle ad with zero metrics', () => {
-      const ad = {
-        ctr: 0,
-        conversionRate: 0,
-        relevanceScore: 0,
-        bidPrice: 1.0,
-      };
-
-      const result = (optimizationService as any).calculatePerformanceScore(ad);
-
-      expect(result).toBeGreaterThanOrEqual(0);
-      expect(typeof result).toBe('number');
-    });
-  });
-
-  describe('updateAdPerformance', () => {
-    it('should update ad performance metrics', async () => {
-      const adId = 'ad-1';
-      const performanceData = {
-        impressions: 100,
-        clicks: 5,
-        conversions: 1,
-        revenue: 25.0,
-      };
-
-      const mockUpdatedAd = {
-        id: adId,
-        ...performanceData,
-        ctr: 0.05,
-        conversionRate: 0.02,
-        updatedAt: new Date(),
-      };
-
-      mockPrisma.advertiserAd.update.mockResolvedValue(mockUpdatedAd);
-
-      const result = await optimizationService.updateAdPerformance(adId, performanceData);
+      const result = await optimizationService.optimizeAdServing(adUnitId, organizationId);
 
       expect(result).toBeDefined();
-      expect(mockPrisma.advertiserAd.update).toHaveBeenCalledWith({
-        where: { id: adId },
-        data: expect.objectContaining({
-          impressions: performanceData.impressions,
-          clicks: performanceData.clicks,
-          conversions: performanceData.conversions,
-        }),
-      });
+      expect(result.recommendations).toBeDefined();
+      expect(result.optimizedSettings).toBeDefined();
     });
   });
 
-  describe('getPerformanceAnalytics', () => {
-    it('should get performance analytics for ad unit', async () => {
+  describe('private methods', () => {
+    it('should analyze performance correctly', async () => {
       const adUnitId = 'unit-1';
-      const startDate = new Date('2024-01-01');
-      const endDate = new Date('2024-01-31');
+      const organizationId = 'org-1';
 
-      const mockAnalytics = {
-        totalImpressions: 1000,
-        totalClicks: 50,
-        totalConversions: 10,
-        totalRevenue: 500.0,
-        averageCtr: 0.05,
-        averageConversionRate: 0.2,
-        averageCpc: 10.0,
-        averageCpm: 50.0,
+      const mockAdUnit = {
+        id: 'unit-1',
+        organizationId: 'org-1',
+        name: 'Test Ad Unit',
+        adRequests: [
+          { id: 'req-1', impression: true, clickThrough: false, createdAt: new Date() },
+          { id: 'req-2', impression: true, clickThrough: true, createdAt: new Date() },
+        ],
       };
 
-      mockPrisma.adRequest.count.mockResolvedValue(1000);
-      mockPrisma.analyticsEvent.aggregate.mockResolvedValue({
-        _count: { id: 50 },
-        _sum: { value: 500.0 },
-      });
+      mockPrisma.adUnit.findFirst.mockResolvedValue(mockAdUnit);
 
-      const result = await optimizationService.getPerformanceAnalytics(
-        adUnitId,
-        startDate,
-        endDate
-      );
+      const result = await optimizationService.optimizeAdServing(adUnitId, organizationId);
 
       expect(result).toBeDefined();
-      expect(result.totalImpressions).toBeDefined();
-      expect(result.totalClicks).toBeDefined();
-      expect(result.totalConversions).toBeDefined();
-      expect(result.totalRevenue).toBeDefined();
+      // The private methods are called internally, so we test their effects through the public method
     });
   });
 
-  describe('optimizeBidPrices', () => {
-    it('should optimize bid prices based on performance', async () => {
-      const campaignId = 'campaign-1';
-      const optimizationParams = {
-        targetCtr: 0.05,
-        targetCpc: 10.0,
-        maxBidIncrease: 0.2,
-        minBidDecrease: 0.1,
+  describe('generateRecommendations', () => {
+    it('should generate recommendations based on performance', async () => {
+      const adUnitId = 'unit-1';
+      const organizationId = 'org-1';
+
+      const mockAdUnit = {
+        id: 'unit-1',
+        organizationId: 'org-1',
+        name: 'Test Ad Unit',
+        adRequests: [
+          { id: 'req-1', impression: true, clickThrough: false, createdAt: new Date() },
+          { id: 'req-2', impression: true, clickThrough: true, createdAt: new Date() },
+        ],
       };
 
-      const mockAds = [
-        { id: 'ad-1', currentBid: 2.0, ctr: 0.03, cpc: 12.0 },
-        { id: 'ad-2', currentBid: 3.0, ctr: 0.07, cpc: 8.0 },
-      ];
+      mockPrisma.adUnit.findFirst.mockResolvedValue(mockAdUnit);
 
-      mockPrisma.advertiserAd.findMany.mockResolvedValue(mockAds);
-      mockPrisma.advertiserAd.update.mockResolvedValue({});
+      const result = await optimizationService.optimizeAdServing(adUnitId, organizationId);
 
-      const result = await optimizationService.optimizeBidPrices(campaignId, optimizationParams);
+      expect(result.recommendations).toBeDefined();
+      expect(Array.isArray(result.recommendations)).toBe(true);
+      expect(result.recommendations.length).toBeGreaterThan(0);
+      
+      // Check recommendation structure
+      if (result.recommendations.length > 0) {
+        const recommendation = result.recommendations[0];
+        expect(recommendation).toHaveProperty('type');
+        expect(recommendation).toHaveProperty('description');
+        expect(recommendation).toHaveProperty('impact');
+        expect(recommendation).toHaveProperty('confidence');
+      }
+    });
+  });
 
-      expect(result).toBeDefined();
-      expect(result.optimizedBids).toBeDefined();
-      expect(result.optimizationSummary).toBeDefined();
+  describe('calculateOptimizedSettings', () => {
+    it('should calculate optimized settings', async () => {
+      const adUnitId = 'unit-1';
+      const organizationId = 'org-1';
+
+      const mockAdUnit = {
+        id: 'unit-1',
+        organizationId: 'org-1',
+        name: 'Test Ad Unit',
+        adRequests: [
+          { id: 'req-1', impression: true, clickThrough: false, createdAt: new Date() },
+          { id: 'req-2', impression: true, clickThrough: true, createdAt: new Date() },
+        ],
+      };
+
+      mockPrisma.adUnit.findFirst.mockResolvedValue(mockAdUnit);
+
+      const result = await optimizationService.optimizeAdServing(adUnitId, organizationId);
+
+      expect(result.optimizedSettings).toBeDefined();
+      expect(typeof result.optimizedSettings).toBe('object');
     });
   });
 }); 

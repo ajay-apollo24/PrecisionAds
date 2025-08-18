@@ -45,36 +45,58 @@ export class AdService {
    * Create a new ad
    */
   async createAd(data: CreateAdData, organizationId: string): Promise<AdWithRelations> {
-    return prisma.advertiserAd.create({
+    const createdAd = await prisma.advertiserAd.create({
       data: {
         ...data,
         organizationId,
-        status: 'DRAFT'
-      },
-      include: {
-        campaign: {
-          select: { id: true, name: true, status: true, type: true }
-        }
+        status: 'DRAFT',
+        targeting: data.targeting as any // Cast to Prisma's expected type
       }
     });
+
+    // Get campaign info for the relation
+    const campaign = await prisma.advertiserCampaign.findFirst({
+      where: { id: data.campaignId },
+      select: { id: true, name: true, status: true, type: true }
+    });
+
+    // Return with campaign relation
+    return {
+      ...createdAd,
+      campaign: campaign || { id: data.campaignId, name: 'Unknown', status: 'UNKNOWN', type: 'UNKNOWN' }
+    } as AdWithRelations;
   }
 
   /**
    * Update an existing ad
    */
   async updateAd(id: string, data: UpdateAdData, organizationId: string): Promise<AdWithRelations> {
-    return prisma.advertiserAd.update({
+    const updateData: any = {
+      ...data,
+      updatedAt: new Date()
+    };
+
+    // Handle targeting field separately
+    if (data.targeting !== undefined) {
+      updateData.targeting = data.targeting as any;
+    }
+
+    const updatedAd = await prisma.advertiserAd.update({
       where: { id, organizationId },
-      data: {
-        ...data,
-        updatedAt: new Date()
-      },
-      include: {
-        campaign: {
-          select: { id: true, name: true, status: true, type: true }
-        }
-      }
+      data: updateData
     });
+
+    // Get campaign info for the relation
+    const campaign = await prisma.advertiserCampaign.findFirst({
+      where: { id: updatedAd.campaignId },
+      select: { id: true, name: true, status: true, type: true }
+    });
+
+    // Return with campaign relation
+    return {
+      ...updatedAd,
+      campaign: campaign || { id: updatedAd.campaignId, name: 'Unknown', status: 'UNKNOWN', type: 'UNKNOWN' }
+    } as AdWithRelations;
   }
 
   /**
@@ -124,9 +146,9 @@ export class AdService {
       totalImpressions: ad.impressions || 0,
       totalClicks: ad.clicks || 0,
       totalConversions: ad.conversions || 0,
-      ctr: ad.ctr || 0,
-      cpc: ad.cpc || 0,
-      cpm: ad.cpm || 0,
+      ctr: Number(ad.ctr) || 0,
+      cpc: Number(ad.cpc) || 0,
+      cpm: Number(ad.cpm) || 0,
       conversionRate: ad.clicks && ad.clicks > 0 ? (ad.conversions || 0) / ad.clicks * 100 : 0
     };
   }

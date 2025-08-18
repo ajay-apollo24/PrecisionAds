@@ -102,7 +102,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
   app.get(`${prefix}/identities/:id`,
     [validateAPIKey, withOrganization],
     requirePermission(['INGEST_READ']),
-    async (req: Request, res: Response) => {
+    async (req: RBACRequest, res: Response) => {
       try {
         const { id } = req.params;
         
@@ -128,15 +128,15 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           throw createError('Identity not found', 404);
         }
 
-        res.json({
+        return res.json({
           success: true,
           data: identity
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -146,7 +146,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
   app.post(`${prefix}/traits`,
     [validateAPIKey, withOrganization],
     requirePermission(['TRAITS_WRITE']),
-    async (req: Request, res: Response) => {
+    async (req: RBACRequest, res: Response) => {
       try {
         const {
           identityId,
@@ -214,16 +214,16 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         );
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'Trait created successfully',
           data: trait
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -233,7 +233,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
   app.post(`${prefix}/cohorts`,
     [validateAPIKey, withOrganization],
     requirePermission(['COHORTS_WRITE']),
-    async (req: Request, res: Response) => {
+    async (req: RBACRequest, res: Response) => {
       try {
         const {
           name,
@@ -302,16 +302,16 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         );
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'Cohort created successfully',
           data: cohort
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -321,7 +321,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
   app.post(`${prefix}/events`,
     [validateAPIKey, withOrganization],
     requirePermission(['INGEST_WRITE']),
-    async (req: Request, res: Response) => {
+    async (req: RBACRequest, res: Response) => {
       try {
         const {
           identityId,
@@ -391,16 +391,16 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         );
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'Event tracked successfully',
           data: event
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -410,7 +410,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
   app.post(`${prefix}/batch`,
     [validateAPIKey, withOrganization],
     requirePermission(['INGEST_WRITE']),
-    async (req: Request, res: Response) => {
+    async (req: RBACRequest, res: Response) => {
       try {
         const { operations } = req.body;
 
@@ -499,7 +499,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           }
         );
 
-        res.json({
+        return res.json({
           success: true,
           message: 'Batch operations completed',
           results: {
@@ -512,9 +512,9 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -524,7 +524,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
   app.get(`${prefix}/identities/:id/traits`,
     [validateAPIKey, withOrganization],
     requirePermission(['TRAITS_READ']),
-    async (req: Request, res: Response) => {
+    async (req: RBACRequest, res: Response) => {
       try {
         const { id } = req.params;
         const { key, type } = req.query;
@@ -549,16 +549,16 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           { operation: 'trait_retrieval' }
         );
 
-        res.json({
+        return res.json({
           success: true,
           data: traits,
           count: traits.length
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -568,7 +568,7 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
   app.get(`${prefix}/identities/:id/events`,
     [validateAPIKey, withOrganization],
     requirePermission(['INGEST_READ']),
-    async (req: Request, res: Response) => {
+    async (req: RBACRequest, res: Response) => {
       try {
         const { id } = req.params;
         const { type, name, startDate, endDate, limit = 100 } = req.query;
@@ -599,16 +599,16 @@ export function setupCanonicalRoutes(app: Express, prefix: string): void {
           { operation: 'event_retrieval' }
         );
 
-        res.json({
+        return res.json({
           success: true,
           data: events,
           count: events.length
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }

@@ -637,7 +637,7 @@ export class RTBService {
   /**
    * Get campaign performance data
    */
-  private async getCampaignPerformance(campaignId: string): Promise<any> {
+  async getCampaignPerformance(campaignId: string): Promise<any> {
     const performance = await prisma.rTBPerformance.findFirst({
       where: { campaignId },
       orderBy: { date: 'desc' }

@@ -242,9 +242,9 @@ export class AdServingService {
         requestId: requestData.requestId,
         userAgent: requestData.userAgent,
         ipAddress: requestData.ipAddress,
-        geoLocation: requestData.geoLocation,
-        deviceInfo: requestData.deviceInfo,
-        targeting: requestData.targeting,
+        geoLocation: requestData.geoLocation as any,
+        deviceInfo: requestData.deviceInfo as any,
+        targeting: requestData.targeting as any,
         status: 'PROCESSED',
         servedAdId: adId
       }

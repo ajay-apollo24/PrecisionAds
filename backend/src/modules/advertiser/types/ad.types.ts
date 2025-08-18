@@ -1,3 +1,6 @@
+import { Decimal } from '@prisma/client/runtime/library';
+import { JsonValue } from '@prisma/client/runtime/library';
+
 export type CreativeType = 'IMAGE' | 'VIDEO' | 'HTML5' | 'NATIVE' | 'TEXT';
 export type AdStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'REJECTED' | 'APPROVED';
 
@@ -8,7 +11,7 @@ export interface CreateAdData {
   creativeUrl: string;
   landingPageUrl: string;
   weight?: number;
-  targeting?: Record<string, any>;
+  targeting?: JsonValue;
 }
 
 export interface UpdateAdData {
@@ -17,7 +20,7 @@ export interface UpdateAdData {
   creativeUrl?: string;
   landingPageUrl?: string;
   weight?: number;
-  targeting?: Record<string, any>;
+  targeting?: JsonValue;
   status?: AdStatus;
 }
 
@@ -36,13 +39,13 @@ export interface AdWithRelations {
   landingPageUrl: string;
   status: AdStatus;
   weight: number;
-  targeting: Record<string, any> | null;
+  targeting: JsonValue | null;
   impressions: number;
   clicks: number;
   conversions: number;
-  ctr: number;
-  cpc: number;
-  cpm: number;
+  ctr: Decimal;
+  cpc: Decimal;
+  cpm: Decimal;
   createdAt: Date;
   updatedAt: Date;
   campaign: CampaignSummary;

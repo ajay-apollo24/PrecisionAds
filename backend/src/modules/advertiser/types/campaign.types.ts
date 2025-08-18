@@ -1,3 +1,5 @@
+import { Decimal } from '@prisma/client/runtime/library';
+
 export type CampaignStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
 export type CampaignType = 'DISPLAY' | 'VIDEO' | 'NATIVE' | 'SEARCH' | 'SOCIAL' | 'RETARGETING' | 'RTB' | 'PROGRAMMATIC';
 export type BudgetType = 'DAILY' | 'LIFETIME' | 'MONTHLY';
@@ -8,13 +10,13 @@ export interface CreateCampaignData {
   type: CampaignType;
   startDate?: Date;
   endDate?: Date;
-  budget: number;
+  budget: Decimal;
   budgetType: BudgetType;
   bidStrategy: BidStrategy;
-  targetCPM?: number;
-  targetCPC?: number;
-  targetCPA?: number;
-  dailyBudget?: number;
+  targetCPM?: Decimal;
+  targetCPC?: Decimal;
+  targetCPA?: Decimal;
+  dailyBudget?: Decimal;
 }
 
 export interface UpdateCampaignData {
@@ -22,13 +24,13 @@ export interface UpdateCampaignData {
   type?: CampaignType;
   startDate?: Date;
   endDate?: Date;
-  budget?: number;
+  budget?: Decimal;
   budgetType?: BudgetType;
   bidStrategy?: BidStrategy;
-  targetCPM?: number;
-  targetCPC?: number;
-  targetCPA?: number;
-  dailyBudget?: number;
+  targetCPM?: Decimal;
+  targetCPC?: Decimal;
+  targetCPA?: Decimal;
+  dailyBudget?: Decimal;
   status?: CampaignStatus;
 }
 
@@ -47,14 +49,14 @@ export interface CampaignWithRelations {
   type: CampaignType;
   startDate: Date | null;
   endDate: Date | null;
-  budget: number;
+  budget: Decimal;
   budgetType: BudgetType;
   bidStrategy: BidStrategy;
-  targetCPM: number | null;
-  targetCPC: number | null;
-  targetCPA: number | null;
-  dailyBudget: number | null;
-  totalSpent: number;
+  targetCPM: Decimal | null;
+  targetCPC: Decimal | null;
+  targetCPA: Decimal | null;
+  dailyBudget: Decimal | null;
+  totalSpent: Decimal;
   impressions: number;
   clicks: number;
   conversions: number;

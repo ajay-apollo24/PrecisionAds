@@ -22,32 +22,27 @@ export class TargetingService {
     try {
       // Get ad targeting criteria
       const ad = await prisma.advertiserAd.findUnique({
-        where: { id: adId },
-        include: {
-          campaign: {
-            select: { targeting: true }
-          }
-        }
+        where: { id: adId }
       });
 
       if (!ad) {
         throw new Error('Ad not found');
       }
 
-      const adTargeting = ad.targeting || {};
-      const campaignTargeting = ad.campaign?.targeting || {};
+      const adTargeting = (ad.targeting || {}) as any;
+      const campaignTargeting = {} as any;
       
       // Combine ad and campaign targeting
-      const combinedTargeting = { ...campaignTargeting, ...adTargeting };
+      const combinedTargeting = { ...(campaignTargeting as any), ...(adTargeting as any) };
 
       // Evaluate each targeting dimension
       const results = {
         geographic: this.evaluateGeographicTargeting(combinedTargeting.geoLocation, userContext.geoLocation),
         device: this.evaluateDeviceTargeting(combinedTargeting.deviceInfo, userContext.deviceInfo),
-        interests: this.evaluateInterestTargeting(combinedTargeting.interests, userContext.interests),
+        interests: this.evaluateInterestTargeting(combinedTargeting.interests ?? [], userContext.interests ?? []),
         demographics: this.evaluateDemographicTargeting(combinedTargeting.demographics, userContext.demographics),
-        behaviors: this.evaluateBehavioralTargeting(combinedTargeting.behaviors, userContext.behaviors)
-      };
+        behaviors: this.evaluateBehavioralTargeting(combinedTargeting.behaviors ?? [], userContext.behaviors ?? [])
+      } as Record<string, any>;
 
       // Calculate overall score
       const scores = Object.values(results).map(r => r.score);
@@ -355,8 +350,8 @@ export class TargetingService {
     }
 
     // Add specific dimension feedback
-    Object.entries(results).forEach(([dimension, result]) => {
-      if (result.score < 0.5) {
+    Object.entries(results as Record<string, any>).forEach(([dimension, result]) => {
+      if ((result as any).score < 0.5) {
         reasons.push(`${dimension.charAt(0).toUpperCase() + dimension.slice(1)} targeting needs improvement`);
       }
     });

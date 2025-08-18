@@ -1,15 +1,17 @@
+import { JsonValue } from '@prisma/client/runtime/library';
+
 export interface CreateAudienceData {
   campaignId: string;
   name: string;
   description?: string;
-  targeting: Record<string, any>;
+  targeting: JsonValue;
   size?: number;
 }
 
 export interface UpdateAudienceData {
   name?: string;
   description?: string;
-  targeting?: Record<string, any>;
+  targeting?: JsonValue;
   size?: number;
 }
 
@@ -23,7 +25,7 @@ export interface AudienceWithRelations {
   campaignId: string;
   name: string;
   description: string | null;
-  targeting: Record<string, any> | null;
+  targeting: JsonValue | null;
   size: number | null;
   createdAt: Date;
   updatedAt: Date;

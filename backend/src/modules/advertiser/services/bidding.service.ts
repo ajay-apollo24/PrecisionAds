@@ -63,7 +63,7 @@ export class BiddingService {
     const confidence = this.calculateConfidence(historicalData, targetingScore);
 
     return {
-      bidAmount: Math.max(0.01, Math.min(finalBid, campaign.budget * 0.1)), // Cap at 10% of budget
+      bidAmount: Math.max(0.01, Math.min(finalBid, Number(campaign.budget) * 0.1)), // Cap at 10% of budget
       confidence,
       factors: {
         baseBid,
@@ -141,22 +141,22 @@ export class BiddingService {
 
     switch (campaign.bidStrategy) {
       case 'MANUAL':
-        baseBid = campaign.targetCPM ? campaign.targetCPM / 1000 : 0.01;
+        baseBid = campaign.targetCPM ? Number(campaign.targetCPM) / 1000 : 0.01;
         break;
       case 'AUTO_CPC':
         baseBid = campaign.targetCPC ? Number(campaign.targetCPC) : 1.50;
         break;
       case 'AUTO_CPM':
-        baseBid = campaign.targetCPM ? campaign.targetCPM / 1000 : 0.003;
+        baseBid = campaign.targetCPM ? Number(campaign.targetCPM) / 1000 : 0.003;
         break;
       case 'TARGET_CPA':
         baseBid = campaign.targetCPA ? Number(campaign.targetCPA) * 0.1 : 0.50;
         break;
       case 'PREDICTIVE':
-        baseBid = campaign.targetCPM ? campaign.targetCPM / 1000 * 1.2 : 0.01;
+        baseBid = campaign.targetCPM ? (Number(campaign.targetCPM) / 1000) * 1.2 : 0.01;
         break;
       case 'AI_OPTIMIZED':
-        baseBid = campaign.targetCPM ? campaign.targetCPM / 1000 * 1.5 : 0.01;
+        baseBid = campaign.targetCPM ? (Number(campaign.targetCPM) / 1000) * 1.5 : 0.01;
         break;
       default:
         baseBid = 0.01;

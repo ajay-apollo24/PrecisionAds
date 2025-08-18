@@ -122,10 +122,16 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
         let targetOrganizationId: string;
         if (isSuperAdmin) {
           // Super admin can specify any organization or use their own
-          targetOrganizationId = organizationId || userOrganizationId;
+          targetOrganizationId = organizationId || userOrganizationId || '';
+          if (!targetOrganizationId) {
+            throw createError('No valid organization ID found', 400);
+          }
         } else {
           // Regular admin can only create keys for their own organization
-          targetOrganizationId = userOrganizationId;
+          targetOrganizationId = userOrganizationId || '';
+          if (!targetOrganizationId) {
+            throw createError('User organization not found', 400);
+          }
           
           // If they try to specify a different organization, reject it
           if (organizationId && organizationId !== userOrganizationId) {
@@ -188,7 +194,7 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
         );
 
         // Return the API key only once (it won't be stored in plain text)
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: 'API key created successfully',
           data: {
@@ -200,9 +206,9 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -255,16 +261,16 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
           updateData
         );
 
-        res.json({
+        return res.json({
           success: true,
           message: 'API key updated successfully',
           data: apiKey
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }
@@ -303,16 +309,16 @@ export function setupAPIKeyRoutes(app: Express, prefix: string): void {
           }
         );
 
-        res.json({
+        return res.json({
           success: true,
           message: 'API key revoked successfully',
           data: apiKey
         });
       } catch (error: any) {
         if (error.statusCode) {
-          res.status(error.statusCode).json({ error: error.message });
+          return res.status(error.statusCode).json({ error: error.message });
         } else {
-          res.status(500).json({ error: 'Internal server error' });
+          return res.status(500).json({ error: 'Internal server error' });
         }
       }
     }

@@ -41,35 +41,51 @@ export class AudienceService {
    * Create a new audience
    */
   async createAudience(data: CreateAudienceData, organizationId: string): Promise<AudienceWithRelations> {
-    return prisma.advertiserAudience.create({
+    const created = await prisma.advertiserAudience.create({
       data: {
         ...data,
-        organizationId
-      },
-      include: {
-        campaign: {
-          select: { id: true, name: true, status: true, type: true }
-        }
+        organizationId,
+        targeting: data.targeting as any
       }
     });
+
+    const campaign = await prisma.advertiserCampaign.findFirst({
+      where: { id: created.campaignId },
+      select: { id: true, name: true, status: true, type: true }
+    });
+
+    return {
+      ...created,
+      campaign: campaign || { id: created.campaignId, name: 'Unknown', status: 'UNKNOWN', type: 'UNKNOWN' }
+    } as AudienceWithRelations;
   }
 
   /**
    * Update an existing audience
    */
   async updateAudience(id: string, data: UpdateAudienceData, organizationId: string): Promise<AudienceWithRelations> {
-    return prisma.advertiserAudience.update({
+    const updateData: any = {
+      ...data,
+      updatedAt: new Date()
+    };
+    if (data.targeting !== undefined) {
+      updateData.targeting = data.targeting as any;
+    }
+
+    const updated = await prisma.advertiserAudience.update({
       where: { id, organizationId },
-      data: {
-        ...data,
-        updatedAt: new Date()
-      },
-      include: {
-        campaign: {
-          select: { id: true, name: true, status: true, type: true }
-        }
-      }
+      data: updateData
     });
+
+    const campaign = await prisma.advertiserCampaign.findFirst({
+      where: { id: updated.campaignId },
+      select: { id: true, name: true, status: true, type: true }
+    });
+
+    return {
+      ...updated,
+      campaign: campaign || { id: updated.campaignId, name: 'Unknown', status: 'UNKNOWN', type: 'UNKNOWN' }
+    } as AudienceWithRelations;
   }
 
   /**
@@ -182,7 +198,7 @@ export class AudienceService {
       errors.push('Audience name is required');
     }
 
-    if (!data.targeting || Object.keys(data.targeting).length === 0) {
+    if (!data.targeting || (typeof data.targeting === 'object' && Object.keys(data.targeting as any).length === 0)) {
       errors.push('Targeting criteria are required');
     }
 
@@ -192,19 +208,20 @@ export class AudienceService {
 
     // Validate targeting structure
     if (data.targeting) {
-      if (data.targeting.geoLocation && typeof data.targeting.geoLocation !== 'object') {
+      const t = data.targeting as any;
+      if (t.geoLocation && typeof t.geoLocation !== 'object') {
         errors.push('Geographic targeting must be an object');
       }
 
-      if (data.targeting.demographics && typeof data.targeting.demographics !== 'object') {
+      if (t.demographics && typeof t.demographics !== 'object') {
         errors.push('Demographic targeting must be an object');
       }
 
-      if (data.targeting.interests && !Array.isArray(data.targeting.interests)) {
+      if (t.interests && !Array.isArray(t.interests)) {
         errors.push('Interests must be an array');
       }
 
-      if (data.targeting.behaviors && !Array.isArray(data.targeting.behaviors)) {
+      if (t.behaviors && !Array.isArray(t.behaviors)) {
         errors.push('Behaviors must be an array');
       }
     }
