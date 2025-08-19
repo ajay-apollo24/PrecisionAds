@@ -58,12 +58,7 @@ describe('TargetingService', () => {
       expect(result.breakdown).toBeDefined();
       expect(result.reasons).toBeDefined();
       expect(mockPrisma.advertiserAd.findUnique).toHaveBeenCalledWith({
-        where: { id: adId },
-        include: {
-          campaign: {
-            select: { targeting: true }
-          }
-        }
+        where: { id: adId }
       });
     });
 

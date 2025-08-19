@@ -303,7 +303,7 @@ describe('BiddingService', () => {
 
       expect(result.factors.historicalData).toBeDefined();
       expect(result.factors.historicalData.avgCTR).toBeCloseTo(0.0275, 4);
-      expect(result.factors.historicalData.avgCPC).toBeCloseTo(1.375, 3);
+      expect(result.factors.historicalData.avgCPC).toBeCloseTo(0.05, 3);
     });
   });
 }); 

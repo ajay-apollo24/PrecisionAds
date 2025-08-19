@@ -10,6 +10,10 @@ jest.mock('../../../../src/shared/database/prisma', () => ({
     adRequest: {
       count: jest.fn(),
     },
+    frequencyCap: {
+      findFirst: jest.fn(),
+      upsert: jest.fn(),
+    },
   },
 }));
 
@@ -166,7 +170,7 @@ describe('FrequencyService', () => {
       const window = 'day';
 
       const mockCount = 2;
-      mockPrisma.adRequest.count.mockResolvedValue(mockCount);
+      mockPrisma.frequencyCap.findFirst.mockResolvedValue({ count: mockCount });
 
       const result = await (frequencyService as any).getCurrentFrequencyCount(
         userId,
@@ -178,7 +182,7 @@ describe('FrequencyService', () => {
       );
 
       expect(result).toBe(mockCount);
-      expect(mockPrisma.adRequest.count).toHaveBeenCalled();
+      expect(mockPrisma.frequencyCap.findFirst).toHaveBeenCalled();
     });
   });
 

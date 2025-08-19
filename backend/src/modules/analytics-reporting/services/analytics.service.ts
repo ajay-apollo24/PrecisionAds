@@ -583,12 +583,19 @@ export class AnalyticsService {
   }
 
   private calculateRevenueMetrics(data: any[]) {
-    return data.reduce((acc, item) => ({
+    const result = data.reduce((acc, item) => ({
       totalRevenue: acc.totalRevenue + Number(item.revenue),
       totalCost: acc.totalCost + Number(item.cost),
       totalProfit: acc.totalProfit + Number(item.profit),
       avgROI: acc.avgROI + Number(item.roi)
     }), { totalRevenue: 0, totalCost: 0, totalProfit: 0, avgROI: 0 });
+    
+    // Calculate average ROI instead of sum
+    if (data.length > 0) {
+      result.avgROI = result.avgROI / data.length;
+    }
+    
+    return result;
   }
 
   private calculateUserMetrics(data: any[]) {

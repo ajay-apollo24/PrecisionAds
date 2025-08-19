@@ -1,150 +1,175 @@
-import { RBACService } from '../../../../src/shared/services/rbac.service';
-import { prisma } from '../../../../src/shared/database/prisma';
-import { createError } from '../../../../src/shared/middleware/error-handler';
-
-// Mock Prisma
-jest.mock('../../../../src/shared/database/prisma', () => ({
-  prisma: {
-    userRole: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    permission: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-    },
-    rolePermission: {
-      findMany: jest.fn(),
-      create: jest.fn(),
-      delete: jest.fn(),
-    },
-  },
-}));
-
-// Mock error handler
-jest.mock('../../../../src/shared/middleware/error-handler', () => ({
-  createError: jest.fn(),
-}));
+import { RBACService, AccessLevel, ResourceType, Action } from '../../../../src/shared/services/rbac.service';
 
 describe('RBACService', () => {
-  let rbacService: RBACService;
-  let mockPrisma: any;
-  let mockCreateError: any;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    rbacService = new RBACService();
-    mockPrisma = prisma;
-    mockCreateError = createError;
-  });
-
-  describe('getUserRoles', () => {
-    it('should return user roles', async () => {
-      const mockRoles = [
-        { id: 'role-1', name: 'Admin', description: 'Administrator role' },
-        { id: 'role-2', name: 'User', description: 'Regular user role' },
-      ];
-
-      (mockPrisma.userRole.findMany as jest.Mock).mockResolvedValue(mockRoles);
-
-      const result = await rbacService.getUserRoles('user-1');
-
-      expect(result).toEqual(mockRoles);
-      expect(mockPrisma.userRole.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1' },
-        include: { role: true },
-      });
+  describe('getAccessLevel', () => {
+    it('should return PLATFORM for SUPER_ADMIN', () => {
+      const result = RBACService.getAccessLevel('SUPER_ADMIN');
+      expect(result).toBe(AccessLevel.PLATFORM);
     });
 
-    it('should handle empty roles', async () => {
-      (mockPrisma.userRole.findMany as jest.Mock).mockResolvedValue([]);
+    it('should return ORGANIZATION for ADMIN', () => {
+      const result = RBACService.getAccessLevel('ADMIN');
+      expect(result).toBe(AccessLevel.ORGANIZATION);
+    });
 
-      const result = await rbacService.getUserRoles('user-1');
+    it('should return TEAM for MANAGER', () => {
+      const result = RBACService.getAccessLevel('MANAGER');
+      expect(result).toBe(AccessLevel.TEAM);
+    });
 
-      expect(result).toEqual([]);
+    it('should return INDIVIDUAL for USER', () => {
+      const result = RBACService.getAccessLevel('USER');
+      expect(result).toBe(AccessLevel.INDIVIDUAL);
+    });
+
+    it('should return INDIVIDUAL for unknown role', () => {
+      const result = RBACService.getAccessLevel('UNKNOWN_ROLE');
+      expect(result).toBe(AccessLevel.INDIVIDUAL);
     });
   });
 
-  describe('checkPermission', () => {
-    it('should return true when user has permission', async () => {
-      const mockRolePermissions = [
-        { permission: { name: 'read:users' } },
-        { permission: { name: 'write:users' } },
-      ];
-
-      (mockPrisma.userRole.findMany as jest.Mock).mockResolvedValue([
-        { roleId: 'role-1' },
-      ]);
-      (mockPrisma.rolePermission.findMany as jest.Mock).mockResolvedValue(mockRolePermissions);
-
-      const result = await rbacService.checkPermission('user-1', 'read:users');
-
+  describe('canAccessResource', () => {
+    it('should allow SUPER_ADMIN to access all resources', () => {
+      const result = RBACService.canAccessResource('SUPER_ADMIN', ResourceType.USER, Action.CREATE);
       expect(result).toBe(true);
     });
 
-    it('should return false when user does not have permission', async () => {
-      const mockRolePermissions = [
-        { permission: { name: 'read:users' } },
-      ];
+    it('should allow ADMIN to manage users', () => {
+      const result = RBACService.canAccessResource('ADMIN', ResourceType.USER, Action.CREATE);
+      expect(result).toBe(true);
+    });
 
-      (mockPrisma.userRole.findMany as jest.Mock).mockResolvedValue([
-        { roleId: 'role-1' },
-      ]);
-      (mockPrisma.rolePermission.findMany as jest.Mock).mockResolvedValue(mockRolePermissions);
+    it('should not allow MANAGER to manage users', () => {
+      const result = RBACService.canAccessResource('MANAGER', ResourceType.USER, Action.CREATE);
+      expect(result).toBe(false);
+    });
 
-      const result = await rbacService.checkPermission('user-1', 'write:users');
+    it('should allow ADMIN to read organizations', () => {
+      const result = RBACService.canAccessResource('ADMIN', ResourceType.ORGANIZATION, Action.READ);
+      expect(result).toBe(true);
+    });
 
+    it('should not allow ADMIN to create organizations', () => {
+      const result = RBACService.canAccessResource('ADMIN', ResourceType.ORGANIZATION, Action.CREATE);
       expect(result).toBe(false);
     });
   });
 
-  describe('assignRoleToUser', () => {
-    it('should assign role to user successfully', async () => {
-      const mockAssignedRole = { id: 'user-role-1', userId: 'user-1', roleId: 'role-1' };
+  describe('getDataScope', () => {
+    it('should return full scope for SUPER_ADMIN', () => {
+      const result = RBACService.getDataScope('SUPER_ADMIN', 'org-1');
+      expect(result.canSeeAllOrganizations).toBe(true);
+      expect(result.canSeeAllUsers).toBe(true);
+      expect(result.canSeeRevenue).toBe(true);
+    });
 
-      (mockPrisma.userRole.create as jest.Mock).mockResolvedValue(mockAssignedRole);
+    it('should return limited scope for ADMIN', () => {
+      const result = RBACService.getDataScope('ADMIN', 'org-1');
+      expect(result.canSeeAllOrganizations).toBe(false);
+      expect(result.canSeeAllUsers).toBe(false);
+      expect(result.canSeeRevenue).toBe(true);
+      expect(result.organizationFilter).toBe('org-1');
+    });
 
-      const result = await rbacService.assignRoleToUser('user-1', 'role-1');
-
-      expect(result).toEqual(mockAssignedRole);
-      expect(mockPrisma.userRole.create).toHaveBeenCalledWith({
-        data: { userId: 'user-1', roleId: 'role-1' },
-      });
+    it('should return restricted scope for USER', () => {
+      const result = RBACService.getDataScope('USER', 'org-1');
+      expect(result.canSeeAllOrganizations).toBe(false);
+      expect(result.canSeeAllUsers).toBe(false);
+      expect(result.canSeeRevenue).toBe(false);
     });
   });
 
-  describe('removeRoleFromUser', () => {
-    it('should remove role from user successfully', async () => {
-      (mockPrisma.userRole.delete as jest.Mock).mockResolvedValue({ id: 'user-role-1' });
+  describe('getMenuItems', () => {
+    it('should return full menu for PLATFORM access', () => {
+      const result = RBACService.getMenuItems(AccessLevel.PLATFORM);
+      expect(result).toContain('organizations');
+      expect(result).toContain('users');
+      expect(result).toContain('api-keys');
+    });
 
-      const result = await rbacService.removeRoleFromUser('user-1', 'role-1');
+    it('should return limited menu for ORGANIZATION access', () => {
+      const result = RBACService.getMenuItems(AccessLevel.ORGANIZATION);
+      expect(result).toContain('users');
+      expect(result).toContain('api-keys');
+      expect(result).not.toContain('organizations');
+    });
 
-      expect(result).toEqual({ id: 'user-role-1' });
-      expect(mockPrisma.userRole.delete).toHaveBeenCalledWith({
-        where: { userId_roleId: { userId: 'user-1', roleId: 'role-1' } },
-      });
+    it('should return basic menu for INDIVIDUAL access', () => {
+      const result = RBACService.getMenuItems(AccessLevel.INDIVIDUAL);
+      expect(result).toEqual(['main', 'metrics', 'auth']);
     });
   });
 
-  describe('getRolePermissions', () => {
-    it('should return role permissions', async () => {
-      const mockPermissions = [
-        { permission: { name: 'read:users', description: 'Read user data' } },
-        { permission: { name: 'write:users', description: 'Write user data' } },
-      ];
+  describe('canManageOrganizations', () => {
+    it('should return true for SUPER_ADMIN', () => {
+      const result = RBACService.canManageOrganizations('SUPER_ADMIN');
+      expect(result).toBe(true);
+    });
 
-      (mockPrisma.rolePermission.findMany as jest.Mock).mockResolvedValue(mockPermissions);
+    it('should return false for ADMIN', () => {
+      const result = RBACService.canManageOrganizations('ADMIN');
+      expect(result).toBe(false);
+    });
+  });
 
-      const result = await rbacService.getRolePermissions('role-1');
+  describe('canManageUsers', () => {
+    it('should return true for SUPER_ADMIN', () => {
+      const result = RBACService.canManageUsers('SUPER_ADMIN');
+      expect(result).toBe(true);
+    });
 
-      expect(result).toEqual(mockPermissions);
-      expect(mockPrisma.rolePermission.findMany).toHaveBeenCalledWith({
-        where: { roleId: 'role-1' },
-        include: { permission: true },
-      });
+    it('should return true for ADMIN', () => {
+      const result = RBACService.canManageUsers('ADMIN');
+      expect(result).toBe(true);
+    });
+
+    it('should return false for MANAGER', () => {
+      const result = RBACService.canManageUsers('MANAGER');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('canManageAPIKeys', () => {
+    it('should return true for SUPER_ADMIN', () => {
+      const result = RBACService.canManageAPIKeys('SUPER_ADMIN');
+      expect(result).toBe(true);
+    });
+
+    it('should return true for ADMIN', () => {
+      const result = RBACService.canManageAPIKeys('ADMIN');
+      expect(result).toBe(true);
+    });
+
+    it('should return true for MANAGER', () => {
+      const result = RBACService.canManageAPIKeys('MANAGER');
+      expect(result).toBe(true);
+    });
+
+    it('should return false for USER', () => {
+      const result = RBACService.canManageAPIKeys('USER');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('canSeeSensitiveMetrics', () => {
+    it('should return true for SUPER_ADMIN', () => {
+      const result = RBACService.canSeeSensitiveMetrics('SUPER_ADMIN');
+      expect(result).toBe(true);
+    });
+
+    it('should return true for ADMIN', () => {
+      const result = RBACService.canSeeSensitiveMetrics('ADMIN');
+      expect(result).toBe(true);
+    });
+
+    it('should return false for MANAGER', () => {
+      const result = RBACService.canSeeSensitiveMetrics('MANAGER');
+      expect(result).toBe(false);
+    });
+
+    it('should return false for USER', () => {
+      const result = RBACService.canSeeSensitiveMetrics('USER');
+      expect(result).toBe(false);
     });
   });
 }); 

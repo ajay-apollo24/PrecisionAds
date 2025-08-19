@@ -13,7 +13,7 @@ jest.mock('../../../../src/shared/database/prisma', () => ({
       update: jest.fn(),
     },
     adUnit: {
-      findUnique: jest.fn(),
+      findFirst: jest.fn(),
     },
     targetingRule: {
       findMany: jest.fn(),
@@ -59,6 +59,9 @@ describe('AuctionService', () => {
       
       const mockRecordAuctionResult = jest.spyOn(auctionService as any, 'recordAuctionResult').mockResolvedValue(undefined);
 
+      // Mock the ad request lookup
+      mockPrisma.adRequest.findUnique.mockResolvedValue(mockAdRequest);
+
       const result = await auctionService.runAuction('req-1');
 
       expect(result).toBeDefined();
@@ -69,7 +72,24 @@ describe('AuctionService', () => {
     });
 
     it('should handle auction with no eligible ads', async () => {
+      const mockAdRequest = {
+        id: 'req-1',
+        organizationId: 'org-1',
+        adUnitId: 'unit-1',
+        status: 'PENDING',
+        adUnit: {
+          id: 'unit-1',
+          organizationId: 'org-1',
+          status: 'ACTIVE',
+          site: { id: 'site-1' }
+        },
+        siteId: 'site-1'
+      };
+
       const mockGetEligibleAds = jest.spyOn(auctionService as any, 'getEligibleAds').mockResolvedValue([]);
+
+      // Mock the ad request lookup
+      mockPrisma.adRequest.findUnique.mockResolvedValue(mockAdRequest);
 
       const result = await auctionService.runAuction('req-1');
 
@@ -92,6 +112,15 @@ describe('AuctionService', () => {
         { id: 'ad-2', status: 'ACTIVE', targetingCriteria: {} },
       ];
 
+      const mockAdUnit = {
+        id: 'unit-1',
+        organizationId: 'org-1',
+        format: 'BANNER',
+        size: '728x90',
+        site: { id: 'site-1', geoLocation: null, deviceInfo: null }
+      };
+
+      mockPrisma.adUnit.findFirst.mockResolvedValue(mockAdUnit);
       mockPrisma.advertiserAd.findMany.mockResolvedValue(mockAds);
 
       const result = await (auctionService as any).getEligibleAds('unit-1', 'org-1');
@@ -104,8 +133,30 @@ describe('AuctionService', () => {
   describe('collectBids', () => {
     it('should collect and process bids', async () => {
       const mockAds = [
-        { id: 'ad-1', bidAmount: 2.5, qualityScore: 0.8, targetingScore: 0.9 },
-        { id: 'ad-2', bidAmount: 3.0, qualityScore: 0.9, targetingScore: 0.8 },
+        { 
+          id: 'ad-1', 
+          bidAmount: 2.5, 
+          qualityScore: 0.8, 
+          targetingScore: 0.9,
+          campaign: { id: 'campaign-1', bidStrategy: 'AUTO_CPC', targetCPC: 2.0 },
+          ctr: 0.025,
+          clicks: 100,
+          conversions: 2,
+          createdAt: new Date(),
+          organizationId: 'org-1'
+        },
+        { 
+          id: 'ad-2', 
+          bidAmount: 3.0, 
+          qualityScore: 0.9, 
+          targetingScore: 0.8,
+          campaign: { id: 'campaign-2', bidStrategy: 'AUTO_CPC', targetCPC: 3.0 },
+          ctr: 0.030,
+          clicks: 150,
+          conversions: 3,
+          createdAt: new Date(),
+          organizationId: 'org-1'
+        },
       ];
 
       const mockAdRequest = { id: 'req-1', adUnitId: 'unit-1' };
@@ -115,6 +166,8 @@ describe('AuctionService', () => {
       expect(result).toBeDefined();
       expect(result.length).toBe(2);
       expect(result[0]).toHaveProperty('totalScore');
+      expect(result[0]).toHaveProperty('adId');
+      expect(result[0]).toHaveProperty('bidAmount');
     });
   });
 }); 

@@ -16,7 +16,7 @@ export class SiteService {
       where.domain = { contains: filters.domain, mode: 'insensitive' };
     }
 
-    return prisma.publisherSite.findMany({
+    const sites = await prisma.publisherSite.findMany({
       where,
       include: {
         adUnits: {
@@ -31,13 +31,31 @@ export class SiteService {
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    // Transform to match SiteWithRelations interface
+    return sites.map(site => ({
+      ...site,
+      settings: site.settings as Record<string, any> | null,
+      adUnits: (site.adUnits || []).map(unit => ({
+        id: unit.id,
+        name: unit.name,
+        format: unit.format,
+        status: unit.status
+      })),
+      earnings: (site.earnings || []).map(earning => ({
+        date: earning.date,
+        revenue: Number(earning.revenue),
+        impressions: earning.impressions,
+        clicks: earning.clicks
+      }))
+    }));
   }
 
   /**
    * Get a single site by ID
    */
   async getSiteById(id: string, organizationId: string): Promise<SiteWithRelations | null> {
-    return prisma.publisherSite.findFirst({
+    const site = await prisma.publisherSite.findFirst({
       where: { id, organizationId },
       include: {
         adUnits: true,
@@ -47,57 +65,93 @@ export class SiteService {
         }
       }
     });
+
+    if (!site) return null;
+
+    // Transform to match SiteWithRelations interface
+    return {
+      ...site,
+      settings: site.settings as Record<string, any> | null,
+      adUnits: (site.adUnits || []).map(unit => ({
+        id: unit.id,
+        name: unit.name,
+        format: unit.format,
+        status: unit.status
+      })),
+      earnings: (site.earnings || []).map(earning => ({
+        date: earning.date,
+        revenue: Number(earning.revenue),
+        impressions: earning.impressions,
+        clicks: earning.clicks
+      }))
+    };
   }
 
   /**
    * Create a new site
    */
   async createSite(data: CreateSiteData, organizationId: string): Promise<SiteWithRelations> {
-    return prisma.publisherSite.create({
+    const site = await prisma.publisherSite.create({
       data: {
         ...data,
         organizationId,
         status: 'PENDING'
-      },
-      include: {
-        adUnits: true,
-        earnings: []
       }
     });
+
+    // Return with empty arrays for new site
+    return {
+      ...site,
+      settings: site.settings as Record<string, any> | null,
+      adUnits: [],
+      earnings: []
+    };
   }
 
   /**
    * Update an existing site
    */
   async updateSite(id: string, data: UpdateSiteData, organizationId: string): Promise<SiteWithRelations> {
-    return prisma.publisherSite.update({
+    const site = await prisma.publisherSite.update({
       where: { id, organizationId },
       data: {
         ...data,
         updatedAt: new Date()
-      },
-      include: {
-        adUnits: true,
-        earnings: []
       }
     });
+
+    // Get current adUnits and earnings
+    const currentSite = await this.getSiteById(id, organizationId);
+    
+    return {
+      ...site,
+      settings: site.settings as Record<string, any> | null,
+      adUnits: currentSite?.adUnits || [],
+      earnings: currentSite?.earnings || []
+    };
   }
 
   /**
    * Delete a site (soft delete by setting status to INACTIVE)
    */
   async deleteSite(id: string, organizationId: string): Promise<SiteWithRelations> {
-    return prisma.publisherSite.update({
+    const site = await prisma.publisherSite.update({
       where: { id, organizationId },
       data: { 
         status: 'INACTIVE',
         updatedAt: new Date()
-      },
-      include: {
-        adUnits: true,
-        earnings: []
       }
     });
+
+    // Get current adUnits and earnings
+    const currentSite = await this.getSiteById(id, organizationId);
+    
+    return {
+      ...site,
+      settings: site.settings as Record<string, any> | null,
+      adUnits: currentSite?.adUnits || [],
+      earnings: currentSite?.earnings || []
+    };
   }
 
   /**
@@ -148,6 +202,7 @@ export class SiteService {
     const sites = await prisma.publisherSite.findMany({
       where: { organizationId, status: 'ACTIVE' },
       include: {
+        adUnits: true,
         earnings: {
           orderBy: { date: 'desc' },
           take: 30 // Last 30 days
@@ -165,6 +220,19 @@ export class SiteService {
       
       return {
         ...site,
+        settings: site.settings as Record<string, any> | null,
+        adUnits: (site.adUnits || []).map(unit => ({
+          id: unit.id,
+          name: unit.name,
+          format: unit.format,
+          status: unit.status
+        })),
+        earnings: (site.earnings || []).map(earning => ({
+          date: earning.date,
+          revenue: Number(earning.revenue),
+          impressions: earning.impressions,
+          clicks: earning.clicks
+        })),
         performanceScore
       };
     });

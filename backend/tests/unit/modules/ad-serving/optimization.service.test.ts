@@ -31,8 +31,9 @@ describe('OptimizationService', () => {
         name: 'Test Ad Unit',
         adRequests: [
           { id: 'req-1', impression: true, clickThrough: false, createdAt: new Date() },
-          { id: 'req-2', impression: true, clickThrough: true, createdAt: new Date() },
+          { id: 'req-2', impression: true, clickThrough: false, createdAt: new Date() },
           { id: 'req-3', impression: false, clickThrough: false, createdAt: new Date() },
+          { id: 'req-4', impression: false, clickThrough: false, createdAt: new Date() },
         ],
       };
 
@@ -99,7 +100,7 @@ describe('OptimizationService', () => {
         name: 'Test Ad Unit',
         adRequests: [
           { id: 'req-1', impression: true, clickThrough: false, createdAt: new Date() },
-          { id: 'req-2', impression: true, clickThrough: true, createdAt: new Date() },
+          { id: 'req-2', impression: true, clickThrough: false, createdAt: new Date() },
         ],
       };
 
@@ -121,9 +122,12 @@ describe('OptimizationService', () => {
         id: 'unit-1',
         organizationId: 'org-1',
         name: 'Test Ad Unit',
+        format: 'BANNER',
         adRequests: [
           { id: 'req-1', impression: true, clickThrough: false, createdAt: new Date() },
-          { id: 'req-2', impression: true, clickThrough: true, createdAt: new Date() },
+          { id: 'req-2', impression: true, clickThrough: false, createdAt: new Date() },
+          { id: 'req-3', impression: false, clickThrough: false, createdAt: new Date() },
+          { id: 'req-4', impression: false, clickThrough: false, createdAt: new Date() },
         ],
       };
 
