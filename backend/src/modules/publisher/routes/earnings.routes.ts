@@ -75,7 +75,7 @@ export function setupEarningsRoutes(app: Express, prefix: string): void {
           averageCPC: totals._avg.cpc || 0
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -143,7 +143,7 @@ export function setupEarningsRoutes(app: Express, prefix: string): void {
         },
         topSites
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {

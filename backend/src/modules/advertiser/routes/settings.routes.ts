@@ -57,7 +57,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const organizationId = req.headers['x-organization-id'] as string;
-    const { name, phone, timezone, language } = req.body;
+    const { firstName, lastName, phone, timezone, language } = req.body;
 
     if (!organizationId) {
       throw createError('Organization ID required', 400);
@@ -85,7 +85,8 @@ export const updateUserProfile = async (req: Request, res: Response) => {
         organizationId 
       },
       data: {
-        name,
+        firstName,
+        lastName,
         phone,
         timezone,
         language,
@@ -93,7 +94,8 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         phone: true,
         timezone: true,

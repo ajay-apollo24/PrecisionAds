@@ -25,7 +25,7 @@ export function setupAdUnitRoutes(app: Express, prefix: string): void {
       });
 
       res.json({ adUnits });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -65,7 +65,7 @@ export function setupAdUnitRoutes(app: Express, prefix: string): void {
         message: 'Ad unit created successfully',
         adUnit
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -112,7 +112,7 @@ export function setupAdUnitRoutes(app: Express, prefix: string): void {
         message: 'Ad unit updated successfully',
         adUnit: updatedAdUnit
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {

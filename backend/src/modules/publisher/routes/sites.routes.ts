@@ -25,7 +25,7 @@ export function setupSiteRoutes(app: Express, prefix: string): void {
       });
 
       res.json({ sites });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -62,7 +62,7 @@ export function setupSiteRoutes(app: Express, prefix: string): void {
         message: 'Site created successfully',
         site
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {

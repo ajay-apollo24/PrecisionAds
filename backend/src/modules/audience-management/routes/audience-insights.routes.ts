@@ -53,11 +53,11 @@ export function setupAudienceInsightsRoutes(app: Express, prefix: string): void 
         engagementInsights,
         summary: {
           totalAudienceSize: demographicInsights.reduce((sum, insight) => sum + insight.audienceSize, 0),
-          averageEngagementRate: engagementInsights.reduce((sum, insight) => sum + insight.engagementRate, 0) / engagementInsights.length,
+          averageEngagementRate: engagementInsights.reduce((sum, insight) => sum + Number(insight.engagementRate), 0) / engagementInsights.length,
           topBehaviors: behavioralInsights.slice(0, 5)
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -100,7 +100,7 @@ export function setupAudienceInsightsRoutes(app: Express, prefix: string): void 
           averageSessionDuration: activeUsers.reduce((sum, user) => sum + user.sessionDuration, 0) / activeUsers.length
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -129,7 +129,7 @@ export function setupAudienceInsightsRoutes(app: Express, prefix: string): void 
       const overlapData = await prisma.audienceSegmentOverlap.findMany({
         where: {
           organizationId,
-          segmentId: { in: segmentIdArray }
+          segmentId1: { in: segmentIdArray }
         }
       });
 
@@ -149,7 +149,7 @@ export function setupAudienceInsightsRoutes(app: Express, prefix: string): void 
         overlapMatrix,
         overlapData
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {

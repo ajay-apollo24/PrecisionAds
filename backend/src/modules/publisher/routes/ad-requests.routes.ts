@@ -47,7 +47,7 @@ export function setupAdRequestRoutes(app: Express, prefix: string): void {
           pages: Math.ceil(total / Number(limit))
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -104,7 +104,7 @@ export function setupAdRequestRoutes(app: Express, prefix: string): void {
           ctr: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.statusCode) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
