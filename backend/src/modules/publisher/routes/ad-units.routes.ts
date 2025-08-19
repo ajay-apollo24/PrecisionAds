@@ -120,4 +120,38 @@ export function setupAdUnitRoutes(app: Express, prefix: string): void {
       }
     }
   });
+
+  // Delete ad unit
+  app.delete(`${prefix}/ad-units/:id`, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        throw createError('Organization ID required', 400);
+      }
+
+      const adUnit = await prisma.adUnit.findFirst({
+        where: { id, organizationId }
+      });
+
+      if (!adUnit) {
+        throw createError('Ad unit not found', 404);
+      }
+
+      await prisma.adUnit.delete({
+        where: { id }
+      });
+
+      res.json({
+        message: 'Ad unit deleted successfully'
+      });
+    } catch (error: any) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
 } 

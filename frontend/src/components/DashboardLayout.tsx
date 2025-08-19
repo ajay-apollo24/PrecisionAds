@@ -13,10 +13,11 @@ import { CampaignManagement } from './advertiser/CampaignManagement';
 import { AnalyticsView } from './advertiser/AnalyticsView';
 import { AudiencesView } from './advertiser/AudiencesView';
 import { SettingsView } from './advertiser/SettingsView';
+import { SiteManagement } from './publisher/SiteManagement';
 import { Sidebar } from './ui/sidebar';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { LogOut, User, Settings, BarChart3, Shield, Activity, Building2, Users, Key } from 'lucide-react';
+import { LogOut, User, Settings, BarChart3, Shield, Activity, Building2, Users, Key, Globe, Target, DollarSign } from 'lucide-react';
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -70,6 +71,9 @@ export function DashboardLayout() {
       case 'publisher':
         return [
           { value: 'main', label: 'Publisher Dashboard', icon: BarChart3 },
+          { value: 'sites', label: 'Site Management', icon: Globe },
+          { value: 'ad-units', label: 'Ad Units', icon: Target },
+          { value: 'earnings', label: 'Earnings', icon: DollarSign },
           { value: 'realtime', label: 'Real-time Data', icon: Activity }
         ];
       default:
@@ -100,7 +104,7 @@ export function DashboardLayout() {
       case 'audiences':
         return <AudiencesView organizationId={user?.organizationId || 'demo-org'} />;
       case 'sites':
-        return <div>Sites Screen - Coming Soon</div>;
+        return <SiteManagement />;
       case 'ad-units':
         return <div>Ad Units Screen - Coming Soon</div>;
       case 'earnings':

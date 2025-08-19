@@ -1,15 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Globe, Target, TrendingUp, DollarSign } from 'lucide-react';
+import { Globe, Target, TrendingUp, DollarSign, Plus } from 'lucide-react';
+import { publisherService, PublisherSite, EarningsSummary } from '../../services/publisher.service';
 
 export function PublisherDashboard() {
+  const [sites, setSites] = useState<PublisherSite[]>([]);
+  const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [sitesData, earningsData] = await Promise.all([
+        publisherService.getSites(),
+        publisherService.getEarningsSummary()
+      ]);
+      setSites(sitesData);
+      setEarnings(earningsData);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const activeSites = sites.filter(site => site.status === 'ACTIVE').length;
+  const totalAdUnits = sites.reduce((sum, site) => sum + site.adUnits.length, 0);
+  const totalRevenue = earnings?.summary.totalRevenue || 0;
+  const totalImpressions = earnings?.summary.totalImpressions || 0;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Publisher Dashboard</h1>
-        <p className="text-muted-foreground">
-          Monitor your sites and ad performance
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Publisher Dashboard</h1>
+          <p className="text-muted-foreground">
+            Monitor your sites and ad performance
+          </p>
+        </div>
+        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
+          <Plus className="h-4 w-4" />
+          Add Site
+        </button>
       </div>
 
       {/* Stats Grid */}
@@ -20,9 +64,9 @@ export function PublisherDashboard() {
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{activeSites}</div>
             <p className="text-xs text-muted-foreground">
-              +1 from last month
+              {sites.length} total sites
             </p>
           </CardContent>
         </Card>
@@ -33,22 +77,22 @@ export function PublisherDashboard() {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{totalAdUnits}</div>
             <p className="text-xs text-muted-foreground">
-              +3 from last month
+              across all sites
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Impressions</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156K</div>
+            <div className="text-2xl font-bold">{totalImpressions.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              this month
             </p>
           </CardContent>
         </Card>
@@ -59,9 +103,9 @@ export function PublisherDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$3,240</div>
+            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              +8% from last month
+              this month
             </p>
           </CardContent>
         </Card>
@@ -76,40 +120,33 @@ export function PublisherDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">TechBlog.com</h3>
-                <p className="text-sm text-muted-foreground">6 ad units • 45K page views</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$1,250</p>
-                <p className="text-sm text-muted-foreground">revenue</p>
-              </div>
+          {sites.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No sites yet. Add your first site to get started.
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">LifestyleMag.net</h3>
-                <p className="text-sm text-muted-foreground">4 ad units • 32K page views</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$890</p>
-                <p className="text-sm text-muted-foreground">revenue</p>
-              </div>
+          ) : (
+            <div className="space-y-4">
+              {sites.slice(0, 5).map((site) => {
+                const siteRevenue = site.earnings.reduce((sum, earning) => sum + earning.revenue, 0);
+                const siteImpressions = site.earnings.reduce((sum, earning) => sum + earning.impressions, 0);
+                
+                return (
+                  <div key={site.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h3 className="font-medium">{site.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {site.adUnits.length} ad units • {siteImpressions.toLocaleString()} impressions
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">${siteRevenue.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">revenue</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">NewsPortal.org</h3>
-                <p className="text-sm text-muted-foreground">8 ad units • 67K page views</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$1,100</p>
-                <p className="text-sm text-muted-foreground">revenue</p>
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
