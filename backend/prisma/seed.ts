@@ -1,6 +1,5 @@
 import { PrismaClient, OrganizationType, UserRole, UserStatus, PermissionScope, APIKeyStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -26,6 +25,8 @@ async function main() {
   await prisma.analyticsEvent.deleteMany();
   await prisma.audienceSegment.deleteMany();
   await prisma.userSession.deleteMany();
+  await prisma.creativeAssetVersion.deleteMany();
+  await prisma.creativeAsset.deleteMany();
   await prisma.user.deleteMany();
   await prisma.organization.deleteMany();
 
@@ -96,7 +97,7 @@ async function main() {
   console.log('🔐 Creating permissions...');
   
   const permissionScopes = Object.values(PermissionScope);
-  const permissions = [];
+  const permissions: any[] = [];
 
   for (const scope of permissionScopes) {
     const permission = await prisma.permission.create({
@@ -270,7 +271,7 @@ async function main() {
   // Create API Keys
   console.log('🔑 Creating API keys...');
   
-  const apiKey1 = crypto.randomBytes(32).toString('hex');
+  const apiKey1 = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   const apiKey1Hash = await bcrypt.hash(apiKey1, 12);
   
   await prisma.aPIKey.create({
@@ -285,7 +286,7 @@ async function main() {
     }
   });
 
-  const apiKey2 = crypto.randomBytes(32).toString('hex');
+  const apiKey2 = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   const apiKey2Hash = await bcrypt.hash(apiKey2, 12);
   
   await prisma.aPIKey.create({
@@ -550,6 +551,258 @@ async function main() {
 
   console.log('✅ Sample earnings created');
 
+  // Create Creative Assets
+  console.log('🎨 Creating creative assets...');
+  
+  const summerDressAsset = await prisma.creativeAsset.create({
+    data: {
+      organizationId: fashionBrandOrg.id,
+      name: 'Summer Dress Collection Banner',
+      fileName: 'summer-dress-banner.jpg',
+      fileSize: 245760, // 240KB
+      mimeType: 'image/jpeg',
+      dimensions: { width: 728, height: 90 },
+      fileHash: 'a1b2c3d4e5f6789012345678901234567890abcdef',
+      cdnUrl: 'https://cdn.example.com/assets/summer-dress-banner.jpg',
+      status: 'VALIDATED',
+      metadata: {
+        colors: ['#FF6B6B', '#4ECDC4', '#45B7D1'],
+        tags: ['summer', 'fashion', 'dresses', 'banner'],
+        brand: 'Fashion Forward',
+        campaign: 'Summer Collection 2024'
+      }
+    }
+  });
+
+  const winterCoatAsset = await prisma.creativeAsset.create({
+    data: {
+      organizationId: fashionBrandOrg.id,
+      name: 'Winter Coat Video Ad',
+      fileName: 'winter-coat-video.mp4',
+      fileSize: 5242880, // 5MB
+      mimeType: 'video/mp4',
+      dimensions: { width: 640, height: 360 },
+      duration: 15, // 15 seconds
+      fileHash: 'b2c3d4e5f6789012345678901234567890abcdef1',
+      cdnUrl: 'https://cdn.example.com/assets/winter-coat-video.mp4',
+      status: 'VALIDATED',
+      metadata: {
+        tags: ['winter', 'fashion', 'coats', 'video'],
+        brand: 'Fashion Forward',
+        campaign: 'Winter Collection 2024',
+        videoQuality: 'HD',
+        aspectRatio: '16:9'
+      }
+    }
+  });
+
+  const html5BannerAsset = await prisma.creativeAsset.create({
+    data: {
+      organizationId: fashionBrandOrg.id,
+      name: 'Interactive HTML5 Banner',
+      fileName: 'interactive-banner.html',
+      fileSize: 15360, // 15KB
+      mimeType: 'text/html',
+      fileHash: 'c3d4e5f6789012345678901234567890abcdef12',
+      cdnUrl: 'https://cdn.example.com/assets/interactive-banner.html',
+      status: 'VALIDATED',
+      metadata: {
+        tags: ['interactive', 'html5', 'banner', 'fashion'],
+        brand: 'Fashion Forward',
+        campaign: 'Interactive Collection',
+        features: ['animation', 'click-tracking', 'responsive'],
+        dimensions: { width: 300, height: 250 }
+      }
+    }
+  });
+
+  const techBannerAsset = await prisma.creativeAsset.create({
+    data: {
+      organizationId: techCorpOrg.id,
+      name: 'Tech Conference Banner',
+      fileName: 'tech-conference-banner.png',
+      fileSize: 184320, // 180KB
+      mimeType: 'image/png',
+      dimensions: { width: 300, height: 250 },
+      fileHash: 'd4e5f6789012345678901234567890abcdef123',
+      cdnUrl: 'https://cdn.example.com/assets/tech-conference-banner.png',
+      status: 'VALIDATED',
+      metadata: {
+        colors: ['#2C3E50', '#3498DB', '#E74C3C'],
+        tags: ['technology', 'conference', 'banner'],
+        brand: 'TechCorp',
+        event: 'Tech Conference 2024'
+      }
+    }
+  });
+
+  console.log('✅ Creative assets created');
+
+  // Create Asset Versions
+  console.log('🔄 Creating asset versions...');
+  
+  await prisma.creativeAssetVersion.create({
+    data: {
+      assetId: summerDressAsset.id,
+      version: 1,
+      filePath: '/assets/v1/summer-dress-banner.jpg',
+      cdnUrl: 'https://cdn.example.com/assets/v1/summer-dress-banner.jpg',
+      isActive: true
+    }
+  });
+
+  await prisma.creativeAssetVersion.create({
+    data: {
+      assetId: winterCoatAsset.id,
+      version: 1,
+      filePath: '/assets/v1/winter-coat-video.mp4',
+      cdnUrl: 'https://cdn.example.com/assets/v1/winter-coat-video.mp4',
+      isActive: true
+    }
+  });
+
+  await prisma.creativeAssetVersion.create({
+    data: {
+      assetId: html5BannerAsset.id,
+      version: 1,
+      filePath: '/assets/v1/interactive-banner.html',
+      cdnUrl: 'https://cdn.example.com/assets/v1/interactive-banner.html',
+      isActive: true
+    }
+  });
+
+  // Create a second version for the summer dress asset
+  await prisma.creativeAssetVersion.create({
+    data: {
+      assetId: summerDressAsset.id,
+      version: 2,
+      filePath: '/assets/v2/summer-dress-banner.jpg',
+      cdnUrl: 'https://cdn.example.com/assets/v2/summer-dress-banner.jpg',
+      isActive: true
+    }
+  });
+
+  console.log('✅ Asset versions created');
+
+  // Update existing ads to use creative assets
+  console.log('🔗 Linking ads to creative assets...');
+  
+  await prisma.advertiserAd.update({
+    where: { id: fashionAd.id },
+    data: {
+      creativeAssetId: summerDressAsset.id
+    }
+  });
+
+  // Create additional ads with different creative assets
+  const winterCoatAd = await prisma.advertiserAd.create({
+    data: {
+      name: 'Winter Coat Video Ad',
+      organizationId: fashionBrandOrg.id,
+      campaignId: fashionCampaign.id,
+      status: 'ACTIVE',
+      creativeType: 'VIDEO',
+      creativeUrl: 'https://cdn.example.com/assets/winter-coat-video.mp4',
+      landingPageUrl: 'https://example.com/winter-collection',
+      creativeAssetId: winterCoatAsset.id,
+      targeting: {
+        interests: ['fashion', 'winter'],
+        demographics: { age: [25, 55] }
+      }
+    }
+  });
+
+  const html5Ad = await prisma.advertiserAd.create({
+    data: {
+      name: 'Interactive HTML5 Banner',
+      organizationId: fashionBrandOrg.id,
+      campaignId: fashionCampaign.id,
+      status: 'ACTIVE',
+      creativeType: 'HTML5',
+      creativeUrl: 'https://cdn.example.com/assets/interactive-banner.html',
+      landingPageUrl: 'https://example.com/interactive-collection',
+      creativeAssetId: html5BannerAsset.id,
+      targeting: {
+        interests: ['fashion', 'interactive'],
+        demographics: { age: [18, 35] }
+      }
+    }
+  });
+
+  console.log('✅ Ads linked to creative assets');
+
+  // Create additional campaigns for more variety
+  console.log('📢 Creating additional campaigns...');
+  
+  const winterCampaign = await prisma.advertiserCampaign.create({
+    data: {
+      name: 'Winter Fashion Collection',
+      organizationId: fashionBrandOrg.id,
+      status: 'ACTIVE',
+      type: 'VIDEO',
+      budget: 15000,
+      budgetType: 'DAILY',
+      bidStrategy: 'AUTO_CPM',
+      startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      endDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000), // 120 days from now
+      targetCPM: 8.50,
+      dailyBudget: 150
+    }
+  });
+
+  const interactiveCampaign = await prisma.advertiserCampaign.create({
+    data: {
+      name: 'Interactive Fashion Experience',
+      organizationId: fashionBrandOrg.id,
+      status: 'ACTIVE',
+      type: 'DISPLAY',
+      budget: 8000,
+      budgetType: 'DAILY',
+      bidStrategy: 'AUTO_CPC',
+      startDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now
+      endDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000), // 75 days from now
+      targetCPC: 0.75,
+      dailyBudget: 80
+    }
+  });
+
+  console.log('✅ Additional campaigns created');
+
+  // Create more audiences
+  console.log('👥 Creating additional audiences...');
+  
+  await prisma.advertiserAudience.create({
+    data: {
+      organizationId: fashionBrandOrg.id,
+      campaignId: winterCampaign.id,
+      name: 'Winter Fashion Enthusiasts',
+      description: 'Target audience for winter fashion campaigns',
+      targeting: {
+        demographics: { age: [25, 55], gender: ['female', 'male'] },
+        interests: ['fashion', 'winter', 'luxury'],
+        locations: ['US', 'CA', 'UK', 'DE', 'FR']
+      },
+      size: 75000
+    }
+  });
+
+  await prisma.advertiserAudience.create({
+    data: {
+      organizationId: fashionBrandOrg.id,
+      campaignId: interactiveCampaign.id,
+      name: 'Digital Fashion Forward',
+      description: 'Tech-savvy fashion consumers',
+      targeting: {
+        demographics: { age: [18, 35], gender: ['female', 'male'] },
+        interests: ['fashion', 'technology', 'social_media'],
+        behaviors: ['online_shopping', 'mobile_users', 'early_adopters']
+      },
+      size: 45000
+    }
+  });
+
+  console.log('✅ Additional audiences created');
+
   console.log('\n🎉 Database seeding completed successfully!');
   console.log('\n📋 Summary of created data:');
   console.log(`   🏢 Organizations: 4`);
@@ -558,8 +811,11 @@ async function main() {
   console.log(`   🔑 API Keys: 2`);
   console.log(`   🌐 Publisher Sites: 2`);
   console.log(`   📱 Ad Units: 2`);
-  console.log(`   📢 Campaigns: 1`);
-  console.log(`   🖼️ Ads: 1`);
+  console.log(`   📢 Campaigns: 3`);
+  console.log(`   🖼️ Ads: 3`);
+  console.log(`   🎨 Creative Assets: 4`);
+  console.log(`   🔄 Asset Versions: 4`);
+  console.log(`   👥 Audiences: 3`);
   console.log(`   👤 Identities: 1`);
   console.log(`   🏷️ Traits: 2`);
   console.log(`   👥 Cohorts: 1`);
@@ -582,6 +838,17 @@ async function main() {
   console.log(`   TechCorp (Publisher): ${techCorpOrg.id}`);
   console.log(`   Fashion Forward (Advertiser): ${fashionBrandOrg.id}`);
   console.log(`   Digital Agency: ${agencyOrg.id}`);
+  
+  console.log('\n🎨 Creative Assets Created:');
+  console.log(`   Summer Dress Banner: ${summerDressAsset.id}`);
+  console.log(`   Winter Coat Video: ${winterCoatAsset.id}`);
+  console.log(`   Interactive HTML5: ${html5BannerAsset.id}`);
+  console.log(`   Tech Conference Banner: ${techBannerAsset.id}`);
+  
+  console.log('\n📢 Campaigns Created:');
+  console.log(`   Summer Fashion: ${fashionCampaign.id}`);
+  console.log(`   Winter Fashion: ${winterCampaign.id}`);
+  console.log(`   Interactive Fashion: ${interactiveCampaign.id}`);
 }
 
 main()
