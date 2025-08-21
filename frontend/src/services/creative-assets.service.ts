@@ -97,7 +97,7 @@ export interface AssetStats {
 }
 
 class CreativeAssetsService {
-  private baseUrl = '/api/creative-assets';
+  private baseUrl = '/api/v1/creative-assets';
 
   // Get all assets for an organization
   async getAssets(
@@ -108,14 +108,13 @@ class CreativeAssetsService {
   ): Promise<{ assets: CreativeAsset[]; total: number; page: number; totalPages: number }> {
     try {
       const params = new URLSearchParams({
-        organizationId,
         page: page.toString(),
         limit: limit.toString(),
         ...filters
       });
 
-      const response = await apiService.get(`${this.baseUrl}/assets?${params}`);
-      return response.data;
+      const response = await apiService.get(`${this.baseUrl}/assets?${params}`, organizationId);
+      return response;
     } catch (error) {
       console.error('Failed to get assets:', error);
       throw error;

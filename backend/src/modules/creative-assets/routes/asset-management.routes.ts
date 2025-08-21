@@ -3,20 +3,41 @@ import { AssetManagementService } from '../services/asset-management.service';
 import { AssetFilters, UpdateAssetData } from '../types/asset.types';
 
 interface AssetRequest extends Request {
-  user: {
+  user?: {
     id: string;
     organizationId: string;
   };
 }
 
 export function setupAssetManagementRoutes(app: Express, prefix: string): void {
+  console.log(`Setting up asset management routes at ${prefix}`);
+  
   const assetService = new AssetManagementService();
+  
+  // Test endpoint to verify routes are working
+  app.get(`${prefix}/test`, (req: Request, res: Response) => {
+    console.log('Creative assets test endpoint hit');
+    res.json({ 
+      message: 'Creative Assets API is working!',
+      prefix,
+      timestamp: new Date().toISOString()
+    });
+  });
 
   // Get all assets for an organization
   app.get(`${prefix}/assets`, async (req: AssetRequest, res: Response) => {
+    console.log('GET /assets endpoint hit', { 
+      query: req.query, 
+      headers: req.headers 
+    });
+    
     try {
       const { page = 1, limit = 20, status, mimeType, search } = req.query;
-      const organizationId = req.user.organizationId;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        return res.status(400).json({ error: 'Organization ID required' });
+      }
 
       const filters: AssetFilters = {};
       if (status) filters.status = status as any;
@@ -44,7 +65,11 @@ export function setupAssetManagementRoutes(app: Express, prefix: string): void {
   app.get(`${prefix}/assets/:assetId`, async (req: AssetRequest, res: Response) => {
     try {
       const { assetId } = req.params;
-      const organizationId = req.user.organizationId;
+      const organizationId = req.headers['x-organization-id'] as string;
+
+      if (!organizationId) {
+        return res.status(400).json({ error: 'Organization ID required' });
+      }
 
       const asset = await assetService.getAssetById(assetId, organizationId);
       
@@ -66,8 +91,12 @@ export function setupAssetManagementRoutes(app: Express, prefix: string): void {
   app.put(`${prefix}/assets/:assetId`, async (req: AssetRequest, res: Response) => {
     try {
       const { assetId } = req.params;
-      const organizationId = req.user.organizationId;
+      const organizationId = req.headers['x-organization-id'] as string;
       const updateData: UpdateAssetData = req.body;
+
+      if (!organizationId) {
+        return res.status(400).json({ error: 'Organization ID required' });
+      }
 
       const updatedAsset = await assetService.updateAsset(
         assetId,

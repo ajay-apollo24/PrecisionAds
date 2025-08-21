@@ -36,7 +36,8 @@ interface CreativeAssetManagerProps {
 export function CreativeAssetManager({ 
   organizationId, 
   onAssetSelect, 
-  selectedAssetId 
+  selectedAssetId,
+  onBack
 }: CreativeAssetManagerProps) {
   const [assets, setAssets] = useState<CreativeAsset[]>([]);
   const [loading, setLoading] = useState(true);

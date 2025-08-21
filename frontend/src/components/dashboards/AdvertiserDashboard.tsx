@@ -5,7 +5,7 @@ import { Target, TrendingUp, Users, DollarSign, Plus, BarChart3, Brain, Image } 
 import { advertiserService, AnalyticsSummary, Campaign } from '../../services/advertiser.service';
 import { CampaignManagement } from '../advertiser/CampaignManagement';
 import AdvancedAlgorithmsDashboard from './AdvancedAlgorithmsDashboard';
-import { CreativeAssetManager } from '../advertiser/CreativeAssetManager';
+import { CreativeAssetManager } from '../advertiser/CreativeAssetManagerFixed';
 import { useAuth } from '../../App';
 
 export function AdvertiserDashboard() {

@@ -13,7 +13,7 @@ import { CampaignManagement } from './advertiser/CampaignManagement';
 import { AnalyticsView } from './advertiser/AnalyticsView';
 import { AudiencesView } from './advertiser/AudiencesView';
 import { SettingsView } from './advertiser/SettingsView';
-import { CreativeAssetManager } from './advertiser/CreativeAssetManager';
+import { CreativeAssetManager } from './advertiser/CreativeAssetManagerFixed';
 import { SiteManagement } from './publisher/SiteManagement';
 import { EarningsDashboard } from './publisher/EarningsDashboard';
 import { AdUnitsOverview } from './publisher/AdUnitsOverview';

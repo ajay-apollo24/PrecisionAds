@@ -199,11 +199,20 @@ export const AssetUpload: React.FC<AssetUploadProps> = ({
             className="hidden"
             id="file-input"
           />
-          <label htmlFor="file-input">
-            <Button>
-              Choose Files
-            </Button>
-          </label>
+          <Button
+            onClick={() => {
+              console.log('Choose Files button clicked');
+              const fileInput = document.getElementById('file-input') as HTMLInputElement;
+              if (fileInput) {
+                fileInput.click();
+              } else {
+                console.error('File input not found');
+              }
+            }}
+            className="px-6 py-3 text-base"
+          >
+            Choose Files
+          </Button>
           <p className="text-sm text-gray-400 mt-2">
             Supports: JPG, PNG, GIF, WebP, MP4, WebM, HTML (Max: 100MB per file)
           </p>

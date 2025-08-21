@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { CreativeAssetsService } from '../../services/creative-assets.service';
 import { 
   Search, 
   Filter, 
@@ -18,6 +19,7 @@ import {
   Copy,
   MoreHorizontal
 } from 'lucide-react';
+import { CreativeAssetsService } from '../../services/creative-assets.service';
 
 interface CreativeAsset {
   id: string;

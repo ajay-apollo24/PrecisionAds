@@ -5,6 +5,7 @@ import { setupAdServingRoutes } from './modules/ad-serving/routes';
 import { setupAudienceManagementRoutes } from './modules/audience-management/routes';
 import { setupAnalyticsReportingRoutes } from './modules/analytics-reporting/routes';
 import { setupAdvancedAdAlgorithmsRoutes } from './modules/advanced-ad-algorithms/routes';
+import { setupCreativeAssetRoutes } from './modules/creative-assets/routes';
 import { setupAdminRoutes } from './modules/admin/routes';
 import { setupSharedRoutes } from './shared/routes';
 import { enhancedLoggerMiddleware, enhancedLogger404Handler } from './shared/middleware/enhanced-logger';
@@ -26,6 +27,9 @@ export function setupRoutes(app: Express): void {
   setupAnalyticsReportingRoutes(app, apiPrefix);
   setupAdvancedAdAlgorithmsRoutes(app, apiPrefix);
   
+  // Setup creative assets routes
+  setupCreativeAssetRoutes(app, apiPrefix);
+  
   // Setup admin routes
   setupAdminRoutes(app, apiPrefix);
   
@@ -44,6 +48,7 @@ export function setupRoutes(app: Express): void {
         audienceManagement: `${apiPrefix}/audience-management`,
         analyticsReporting: `${apiPrefix}/analytics-reporting`,
         advancedAlgorithms: `${apiPrefix}/advanced-algorithms`,
+        creativeAssets: `${apiPrefix}/creative-assets`,
         admin: `${apiPrefix}/admin`,
         shared: `${apiPrefix}/shared`
       },
