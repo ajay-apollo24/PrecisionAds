@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { AdminDashboard } from './dashboards/AdminDashboard';
 import { AdvertiserDashboard } from './dashboards/AdvertiserDashboard';
@@ -14,15 +14,31 @@ import { AnalyticsView } from './advertiser/AnalyticsView';
 import { AudiencesView } from './advertiser/AudiencesView';
 import { SettingsView } from './advertiser/SettingsView';
 import { SiteManagement } from './publisher/SiteManagement';
+import { EarningsDashboard } from './publisher/EarningsDashboard';
+import { AdUnitsOverview } from './publisher/AdUnitsOverview';
+import { ReportingModule } from './publisher/ReportingModule';
 import { Sidebar } from './ui/sidebar';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { LogOut, User, Settings, BarChart3, Shield, Activity, Building2, Users, Key, Globe, Target, DollarSign } from 'lucide-react';
+import { LogOut, User, Settings, BarChart3, Shield, Activity, Building2, Users, Key, Globe, Target, DollarSign, FileText } from 'lucide-react';
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('main');
+
+  useEffect(() => {
+    // Listen for navigation events from child components
+    const handleNavigateToTab = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+    
+    window.addEventListener('navigateToTab', handleNavigateToTab as EventListener);
+    
+    return () => {
+      window.removeEventListener('navigateToTab', handleNavigateToTab as EventListener);
+    };
+  }, []);
 
   // Debug logging for user role
   console.log('🔍 DashboardLayout - User Role Debug:', {
@@ -74,6 +90,7 @@ export function DashboardLayout() {
           { value: 'sites', label: 'Site Management', icon: Globe },
           { value: 'ad-units', label: 'Ad Units', icon: Target },
           { value: 'earnings', label: 'Earnings', icon: DollarSign },
+          { value: 'reporting', label: 'Reporting', icon: FileText },
           { value: 'realtime', label: 'Real-time Data', icon: Activity }
         ];
       default:
@@ -106,9 +123,11 @@ export function DashboardLayout() {
       case 'sites':
         return <SiteManagement />;
       case 'ad-units':
-        return <div>Ad Units Screen - Coming Soon</div>;
+        return <AdUnitsOverview />;
       case 'earnings':
-        return <div>Earnings Screen - Coming Soon</div>;
+        return <EarningsDashboard />;
+      case 'reporting':
+        return <ReportingModule />;
       case 'settings':
         return <SettingsView />;
       default:

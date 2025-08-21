@@ -111,7 +111,11 @@ export function SiteManagement() {
             Manage your publisher sites and domains
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+        <Button 
+          onClick={() => setShowForm(true)} 
+          className="flex items-center gap-2"
+          disabled={loading}
+        >
           <Plus className="h-4 w-4" />
           Add Site
         </Button>
@@ -231,6 +235,13 @@ export function SiteManagement() {
                       onClick={() => handleEdit(site)}
                     >
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/publisher/site-analytics/${site.id}`, '_blank')}
+                    >
+                      <Eye className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"

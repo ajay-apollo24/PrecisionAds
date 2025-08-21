@@ -50,7 +50,14 @@ export function PublisherDashboard() {
             Monitor your sites and ad performance
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
+        <button 
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          onClick={() => {
+            // Navigate to sites tab
+            const event = new CustomEvent('navigateToTab', { detail: 'sites' });
+            window.dispatchEvent(event);
+          }}
+        >
           <Plus className="h-4 w-4" />
           Add Site
         </button>
