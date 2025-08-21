@@ -311,6 +311,9 @@ model Organization {
   advertiserCampaigns AdvertiserCampaign[]
   advertiserAds       AdvertiserAd[]
   advertiserAudiences AdvertiserAudience[]
+  
+  // Creative Asset Management
+  creativeAssets      CreativeAsset[]
 
   // Shared relations
   analyticsEvents AnalyticsEvent[]
@@ -589,6 +592,7 @@ model AdvertiserAd {
   creativeType   CreativeType
   creativeUrl    String
   landingPageUrl String
+  creativeAssetId String?     // Reference to creative asset
   status         AdStatus     @default(DRAFT)
   weight         Int          @default(100)
   targeting      Json?
@@ -603,6 +607,7 @@ model AdvertiserAd {
   
   organization Organization       @relation(fields: [organizationId], references: [id])
   campaign     AdvertiserCampaign @relation(fields: [campaignId], references: [id])
+  creativeAsset CreativeAsset? @relation(fields: [creativeAssetId], references: [id])
   
   @@map("advertiser_ads")
 }
@@ -1185,4 +1190,59 @@ model UserSecuritySettings {
 
   @@unique([userId, organizationId])
   @@map("user_security_settings")
+}
+
+// Creative Asset Management Models
+model CreativeAsset {
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String
+  fileName        String
+  fileSize        Int      // in bytes
+  mimeType        String
+  dimensions      Json?    // {width: number, height: number}
+  duration        Int?     // for video assets in seconds
+  fileHash        String   // for deduplication
+  cdnUrl          String?
+  localPath       String?  // temporary local storage path
+  status          CreativeAssetStatus @default(PENDING)
+  validationErrors Json?   // array of validation errors
+  metadata        Json?    // additional metadata (colors, tags, etc.)
+  
+  // Relationships
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  ads            AdvertiserAd[]
+  assetVersions  CreativeAssetVersion[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([organizationId])
+  @@index([fileHash])
+  @@index([status])
+  @@map("creative_assets")
+}
+
+model CreativeAssetVersion {
+  id              String   @id @default(cuid())
+  assetId         String
+  version         Int
+  filePath        String
+  cdnUrl          String?
+  isActive        Boolean  @default(true)
+  
+  asset           CreativeAsset @relation(fields: [assetId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([assetId, version])
+  @@map("creative_asset_versions")
+}
+
+enum CreativeAssetStatus {
+  PENDING
+  PROCESSING
+  VALIDATED
+  REJECTED
+  ARCHIVED
 }

@@ -13,6 +13,7 @@ import { CampaignManagement } from './advertiser/CampaignManagement';
 import { AnalyticsView } from './advertiser/AnalyticsView';
 import { AudiencesView } from './advertiser/AudiencesView';
 import { SettingsView } from './advertiser/SettingsView';
+import { CreativeAssetManager } from './advertiser/CreativeAssetManager';
 import { SiteManagement } from './publisher/SiteManagement';
 import { EarningsDashboard } from './publisher/EarningsDashboard';
 import { AdUnitsOverview } from './publisher/AdUnitsOverview';
@@ -20,7 +21,7 @@ import { ReportingModule } from './publisher/ReportingModule';
 import { Sidebar } from './ui/sidebar';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { LogOut, User, Settings, BarChart3, Shield, Activity, Building2, Users, Key, Globe, Target, DollarSign, FileText } from 'lucide-react';
+import { LogOut, User, Settings, BarChart3, Shield, Activity, Building2, Users, Key, Globe, Target, DollarSign, FileText, Image } from 'lucide-react';
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -82,6 +83,7 @@ export function DashboardLayout() {
       case 'advertiser':
         return [
           { value: 'main', label: 'Campaign Dashboard', icon: BarChart3 },
+          { value: 'creative-assets', label: 'Creative Assets', icon: Image },
           { value: 'realtime', label: 'Real-time Data', icon: Activity }
         ];
       case 'publisher':
@@ -102,6 +104,8 @@ export function DashboardLayout() {
     switch (activeTab) {
       case 'main':
         return renderMainDashboard();
+      case 'creative-assets':
+        return <CreativeAssetManager organizationId={user?.organizationId || 'demo-org'} />;
       case 'metrics':
         return <DataMetricsDashboard />;
       case 'auth':

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Target, TrendingUp, Users, DollarSign, Plus, BarChart3, Brain } from 'lucide-react';
+import { Target, TrendingUp, Users, DollarSign, Plus, BarChart3, Brain, Image } from 'lucide-react';
 import { advertiserService, AnalyticsSummary, Campaign } from '../../services/advertiser.service';
 import { CampaignManagement } from '../advertiser/CampaignManagement';
 import AdvancedAlgorithmsDashboard from './AdvancedAlgorithmsDashboard';
+import { CreativeAssetManager } from '../advertiser/CreativeAssetManager';
 import { useAuth } from '../../App';
 
 export function AdvertiserDashboard() {
@@ -15,6 +16,7 @@ export function AdvertiserDashboard() {
   const [loading, setLoading] = useState(true);
   const [showCampaignManagement, setShowCampaignManagement] = useState(false);
   const [showAdvancedAlgorithms, setShowAdvancedAlgorithms] = useState(false);
+  const [showCreativeAssets, setShowCreativeAssets] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -79,6 +81,12 @@ export function AdvertiserDashboard() {
     );
   }
 
+  if (showCreativeAssets) {
+    return (
+      <CreativeAssetManager organizationId={organizationId} />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -96,6 +104,10 @@ export function AdvertiserDashboard() {
           <Button onClick={() => setShowAdvancedAlgorithms(true)}>
             <Brain className="h-4 w-4 mr-2" />
             Advanced Algorithms
+          </Button>
+          <Button onClick={() => setShowCreativeAssets(true)}>
+            <Image className="h-4 w-4 mr-2" />
+            Creative Assets
           </Button>
           <Button onClick={() => setShowCampaignManagement(true)}>
             <Plus className="h-4 w-4 mr-2" />
