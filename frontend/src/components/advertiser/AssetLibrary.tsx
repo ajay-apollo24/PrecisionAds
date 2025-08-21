@@ -4,7 +4,6 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { CreativeAssetsService } from '../../services/creative-assets.service';
 import { 
   Search, 
   Filter, 
@@ -19,7 +18,7 @@ import {
   Copy,
   MoreHorizontal
 } from 'lucide-react';
-import { CreativeAssetsService } from '../../services/creative-assets.service';
+import { creativeAssetsService } from '../../services/creative-assets.service';
 
 interface CreativeAsset {
   id: string;
@@ -70,57 +69,10 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
   const loadAssets = async () => {
     setLoading(true);
     try {
-      // In a real implementation, this would call the API
-      const mockAssets: CreativeAsset[] = [
-        {
-          id: '1',
-          name: 'Summer Banner Ad',
-          fileName: 'summer_banner.jpg',
-          fileSize: 245760,
-          mimeType: 'image/jpeg',
-          dimensions: { width: 728, height: 90 },
-          status: 'VALIDATED',
-          cdnUrl: 'https://cdn.example.com/assets/1.jpg',
-          createdAt: '2024-01-15T10:30:00Z',
-          tags: ['summer', 'banner', 'promotional'],
-          metadata: { colors: ['#FF6B6B', '#4ECDC4'], brand: 'Summer Collection' }
-        },
-        {
-          id: '2',
-          name: 'Product Video',
-          fileName: 'product_demo.mp4',
-          fileSize: 5242880,
-          mimeType: 'video/mp4',
-          duration: 30,
-          status: 'PROCESSING',
-          createdAt: '2024-01-15T11:00:00Z',
-          tags: ['product', 'video', 'demo']
-        },
-        {
-          id: '3',
-          name: 'HTML5 Interactive Ad',
-          fileName: 'interactive_ad.html',
-          fileSize: 102400,
-          mimeType: 'text/html',
-          status: 'VALIDATED',
-          cdnUrl: 'https://cdn.example.com/assets/3.html',
-          createdAt: '2024-01-14T15:45:00Z',
-          tags: ['interactive', 'html5', 'engagement']
-        },
-        {
-          id: '4',
-          name: 'Winter Campaign Image',
-          fileName: 'winter_campaign.png',
-          fileSize: 512000,
-          mimeType: 'image/png',
-          dimensions: { width: 1200, height: 630 },
-          status: 'VALIDATED',
-          cdnUrl: 'https://cdn.example.com/assets/4.png',
-          createdAt: '2024-01-13T09:15:00Z',
-          tags: ['winter', 'campaign', 'social']
-        }
-      ];
-      setAssets(mockAssets);
+      // Get organization ID from context or props - for now using a default
+      const organizationId = 'cmel727sf0002tuo23kkxb1zb'; // This should come from user context
+      const result = await creativeAssetsService.getAssets(organizationId);
+      setAssets(result.assets);
     } catch (error) {
       console.error('Failed to load assets:', error);
     } finally {
