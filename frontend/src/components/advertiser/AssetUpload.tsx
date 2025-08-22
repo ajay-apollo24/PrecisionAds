@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Clock
 } from 'lucide-react';
+import { creativeAssetsService } from '../../services/creative-assets.service';
 
 interface UploadFile {
   id: string;
@@ -106,26 +107,28 @@ export const AssetUpload: React.FC<AssetUploadProps> = ({
     );
 
     try {
-      // Simulate upload progress
-      for (let progress = 0; progress <= 100; progress += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setUploadFiles(prev => 
-          prev.map(f => f.id === uploadFile.id ? { ...f, progress } : f)
-        );
-      }
-
-      // Simulate successful upload
-      const assetId = `asset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Get organization ID - this should come from props or context
+      const organizationId = 'cmel727sf0002tuo23kkxb1zb'; // TODO: Get from user context
       
+      // Upload to backend
+      const result = await creativeAssetsService.uploadAsset(
+        uploadFile.file,
+        organizationId,
+        assetNames[uploadFile.id]
+      );
+      
+      // Update status to completed
       setUploadFiles(prev => 
         prev.map(f => f.id === uploadFile.id 
-          ? { ...f, status: 'completed', assetId, progress: 100 } 
+          ? { ...f, status: 'completed', assetId: result.assetId, progress: 100 } 
           : f
         )
       );
 
-      onUploadComplete?.(assetId);
+      // Call the callback with the real asset ID
+      onUploadComplete?.(result.assetId);
     } catch (error) {
+      console.error('Upload failed:', error);
       setUploadFiles(prev => 
         prev.map(f => f.id === uploadFile.id 
           ? { ...f, status: 'error', error: 'Upload failed' } 

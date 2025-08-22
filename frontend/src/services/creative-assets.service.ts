@@ -145,14 +145,21 @@ class CreativeAssetsService {
         formData.append('assetName', assetName);
       }
 
-      const response = await apiService.post(`${this.baseUrl}/upload`, formData, {
+      // For FormData, we need to use fetch directly since apiService.post uses JSON.stringify
+      const response = await fetch(`${this.baseUrl}/upload`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'x-organization-id': organizationId
-        }
+          'x-organization-id': organizationId,
+          // Don't set Content-Type for FormData - let the browser set it with boundary
+        },
+        body: formData,
       });
 
-      return response.data;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
     } catch (error) {
       console.error('Failed to upload asset:', error);
       throw error;
